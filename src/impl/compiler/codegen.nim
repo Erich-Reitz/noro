@@ -2,14 +2,14 @@ import instruct
 
 import std/tables
 
-type Ctx = ref object 
+type Ctx = ref object
     code*: string
 
 var counter = 1
 
 proc `+=`(c: Ctx, s: string) =
     c.code.add(s)
-    
+
 
 func isInstructionWhichStoresTemp(i: Instruction): bool =
     case i.kind
@@ -26,11 +26,12 @@ proc localvars(instructions: seq[Instruction]): int =
     for i in instructions:
         if isInstructionWhichStoresTemp(i):
             total += 1
-    
+
     return total
 
 
-proc codeGenMoveInstruction(t: var TableRef[string, int], i: Instruction): string =
+proc codeGenMoveInstruction(t: var TableRef[string, int],
+        i: Instruction): string =
     assert i.kind == ikMov
 
 
@@ -53,7 +54,8 @@ proc codeGenMoveInstruction(t: var TableRef[string, int], i: Instruction): strin
             let srcName = src.label
             let destIndex = t[destName]
             let srcIndex = t[srcName]
-            return "    mov qword [rbp - " & $(destIndex * 8) & "], [rbp - " & $(srcIndex * 8) & "]"
+            return "    mov qword [rbp - " & $(destIndex * 8) & "], [rbp - " &
+                    $(srcIndex * 8) & "]"
         of vkConst:
             let destName = dest.label
             let destIndex = t[destName]
@@ -73,7 +75,7 @@ proc codeGenIntEqual(t: var TableRef[string, int], i: Instruction): string =
     let rhsCompare = i.src2
 
     assert dest.kind == vkTemp
-    
+
     case lhsCompare.kind
     of vkTemp:
         case rhsCompare.kind
@@ -84,14 +86,16 @@ proc codeGenIntEqual(t: var TableRef[string, int], i: Instruction): string =
             let destIndex = t[destName]
             let lhsIndex = t[lhsName]
             let rhsIndex = t[rhsName]
-            return "    cmp [rbp - " & $(lhsIndex * 8) & "], [rbp - " & $(rhsIndex * 8) & "]\n" &
+            return "    cmp [rbp - " & $(lhsIndex * 8) & "], [rbp - " & $(
+                    rhsIndex * 8) & "]\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
         of vkConst:
             let destName = dest.label
             let lhsName = lhsCompare.label
             let destIndex = t[destName]
             let lhsIndex = t[lhsName]
-            return "    cmp [rbp - " & $(lhsIndex * 8) & "], " & $(rhsCompare.val) & "\n" &
+            return "    cmp [rbp - " & $(lhsIndex * 8) & "], " & $(
+                    rhsCompare.val) & "\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
     of vkConst:
         case rhsCompare.kind
@@ -100,21 +104,24 @@ proc codeGenIntEqual(t: var TableRef[string, int], i: Instruction): string =
             let rhsName = rhsCompare.label
             let destIndex = t[destName]
             let rhsIndex = t[rhsName]
-            return "    cmp " & $(lhsCompare.val) & ", [rbp - " & $(rhsIndex * 8) & "]\n" &
+            return "    cmp " & $(lhsCompare.val) & ", [rbp - " & $(rhsIndex *
+                    8) & "]\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
         of vkConst:
             let destName = dest.label
             let destIndex = t[destName]
-            return "    cmp " & $(lhsCompare.val) & ", " & $(rhsCompare.val) & "\n" &
+            return "    cmp " & $(lhsCompare.val) & ", " & $(rhsCompare.val) &
+                    "\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
-    
 
-proc codegenConditionalJump(t: var TableRef[string, int], i: Instruction): string =
+
+proc codegenConditionalJump(t: var TableRef[string, int],
+        i: Instruction): string =
     assert i.kind == ikConditionalJump
 
     # the destination is the thing to test for 0 or 1
     let dest = i.dst
-    
+
     # if dest is 0, then jump to src2, else if dest is true then jump to src
     let src = i.src
     let src2 = i.src2
@@ -126,7 +133,7 @@ proc codegenConditionalJump(t: var TableRef[string, int], i: Instruction): strin
 
     # src1 is a temp. label
     assert src.kind == vkTemp
-    let src1Name = src.label   
+    let src1Name = src.label
 
     if src2 != nil:
         assert src2.kind == vkTemp
@@ -156,15 +163,15 @@ proc codegen(t: var TableRef[string, int], i: Instruction): string =
     of ikConditionalJump:
         return codegenConditionalJump(t, i)
     of ikLabelCreate:
-        return codegenLabelCreate(t, i) 
+        return codegenLabelCreate(t, i)
     of ikLabelJumpTo:
         return "    jmp ." & i.dst.label
     else:
         echo "codegen: unhandled instruction kind: ", i.kind
         quit QuitFailure
-    
+
     return ""
-        
+
 
 proc codegen(c: Ctx, n: Frame) =
     let name = n.name
@@ -201,7 +208,7 @@ proc codegen(c: Ctx, n: Frame) =
 proc codegenFrames*(frames: seq[Frame]): string =
     let ctx = Ctx()
 
-    ctx += "section .text\n"    
+    ctx += "section .text\n"
     ctx += "global _start\n"
 
     for f in frames:

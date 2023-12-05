@@ -2,7 +2,8 @@ import ast
 
 type
     InstructionKind* = enum
-        ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo, ikConditionalJump, ikReturn
+        ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo,
+            ikConditionalJump, ikReturn
 
     ValueKind* = enum
         vkConst, vkTemp
@@ -164,7 +165,7 @@ proc generateInstruction(node: AstReturn): seq[Instruction] =
     let retExp = node.exp
 
     let retDest = Value(kind: vkTemp, label: "ret")
-    
+
     let retValue = processSide(retExp, instructions)
 
     instructions.add(Instruction(kind: ikMov, dst: retDest, src: retValue))
@@ -177,7 +178,6 @@ proc generateInstruction(node: AstReturn): seq[Instruction] =
 proc genfuncbody(funcbody: seq[AstNode]): seq[Instruction] =
     var instructions = newSeq[Instruction]()
     for n in funcbody:
-        echo n.kind
         case n.kind:
         of akMove:
             instructions.add(generateInstruction(n.moveExpr))

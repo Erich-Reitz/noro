@@ -17,21 +17,9 @@ proc run(program: string): void =
     semAnalysis(lexpr)
     let code = translate(lexpr)
 
-    for n in code:
-        debugPrint(n)
-
     let instructions = instructgen(code)
     let optimized = optpass(instructions)
-    for f in optimized:
-        echo f.name
-        for i in f.instructions:
-            if i.src2 != nil:
-                echo i.kind, " ", "dst: ", i.dst, " src: ", i.src, " src2: ", i.src2
-            else:
-                if i.src != nil:
-                    echo i.kind, " ", "dst: ", i.dst, " src: ", i.src
-                else:
-                    echo i.kind, " ", "dst: ", i.dst
+
     let asmCode = codegenFrames(optimized)
     echo asmCode
 

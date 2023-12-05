@@ -1,4 +1,4 @@
-import instruct 
+import instruct
 import std/tables
 import std/strutils
 
@@ -6,10 +6,8 @@ let aggresive = true
 
 
 proc binOpOfConstants(i: Instruction): bool =
-    echo "binOpOfConstants", i
     if i.kind == ikAdd or i.kind == ikMinus or i.kind == ikIntEqual:
         if i.src.kind == vkConst and i.src2.kind == vkConst:
-            echo "binOpOfConstants", i, "true"
             return true
     return false
 
@@ -33,22 +31,22 @@ proc binOpToMoveOp(i: Instruction): Instruction =
 
 proc reduceConstantOperations(instructions: seq[Instruction]): seq[Instruction] =
     result = @[]
-    for  i in instructions:
+    for i in instructions:
         if binOpOfConstants(i):
             let newi = binOpToMoveOp(i)
             result.add(newi)
         else:
             result.add(i)
-    
+
     return result
 
 
 
 proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
-    var constTable = initTable[string, int]()  # Table to map variable names to constant values
+    var constTable = initTable[string, int]() # Table to map variable names to constant values
     result = @[]
     for i in 0 ..< instructions.len:
-        
+
         let instr = instructions[i]
         case instr.kind
         of ikMov:
@@ -58,7 +56,9 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
                     # get the const value
                     let constVal = constTable[instr.src.label]
                     # update the instruction
-                    let newInstruct = Instruction(kind: instr.kind, dst: instr.dst, src: Value(kind: vkConst, val: constVal))
+                    let newInstruct = Instruction(kind: instr.kind,
+                            dst: instr.dst, src: Value(kind: vkConst,
+                            val: constVal))
                     result.add(newInstruct)
                 else:
                     result.add(instr)
@@ -78,7 +78,8 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
             if src2.kind == vkTemp and src2.label in constTable:
                 src2 = Value(kind: vkConst, val: constTable[src2.label])
 
-            let newInstruct = Instruction(kind: instr.kind, dst: instr.dst, src: src1, src2: src2)
+            let newInstruct = Instruction(kind: instr.kind, dst: instr.dst,
+                    src: src1, src2: src2)
             result.add(newInstruct)
         else:
             result.add(instr)
@@ -94,20 +95,20 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
         let dst = i.dst
         assert dst.kind == vkTemp
         let str = dst.label
-        
+
         if i.kind != ikConditionalJump:
             used[str] = false
         else:
             used[str] = true
         if i.src != nil:
             let src = i.src
-            
+
             if src.kind == vkTemp:
                 used[src.label] = true
-            
+
             if i.src2 != nil and i.src2.kind == vkTemp:
                 used[i.src2.label] = true
-    
+
     used["ret"] = true
     for i in instructions:
         if i.kind == ikMov:
@@ -122,7 +123,7 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
                         discard
             else:
                 result.add(i)
-        
+
         elif i.kind == ikIntEqual:
             let dest = i.dst
             assert dest.kind == vkTemp
@@ -148,12 +149,12 @@ proc optimizeInstructions(instructions: seq[Instruction]): seq[Instruction] =
         newInstructions = sourceOfSourceIsConst(newInstructions)
     newInstructions = removeUnusedTemps(newInstructions)
     return newInstructions
-    
+
 
 
 proc opt(frame: Frame): Frame =
     var newFrame = Frame(name: frame.name)
-    
+
     var newInstructions = frame.instructions
     var iterations = 0
     const maxIterations = 10
@@ -171,6 +172,6 @@ proc optpass*(frames: seq[Frame]): seq[Frame] =
     var optframes: seq[Frame] = @[]
     for f in frames:
         optframes.add(opt(f))
-    
+
     return optframes
 
