@@ -293,3 +293,4 @@ proc translate*(p: Program): seq[AstNode] =
     result = @[]
     for externalDecl in p.externalDecls:
         result.add(translate(tb, externalDecl))
+        tb.counter = 0

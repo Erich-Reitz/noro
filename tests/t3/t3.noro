@@ -1,0 +1,28 @@
+function add(int n1, int n2) -> int {
+    return n1 + n2; 
+}
+
+
+function isEqual(int n1, int n2) -> int {
+    if (n1 == n2) {
+        return 1; 
+    }
+
+    return 0; 
+}
+
+function main() -> int {
+    int result = add(1, 10);
+
+
+    if (isEqual(result, 11) == 0) {
+        if (2 == 1) {
+            return 100;
+        } else {
+            return 300; 
+        }
+    } 
+
+
+    return 200; 
+}

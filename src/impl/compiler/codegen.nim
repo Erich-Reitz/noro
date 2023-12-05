@@ -84,7 +84,9 @@ proc codeGenMoveInstruction(t: GenTable,
         of vkConst:
             return "    mov " & dest.label & ", " & $(i.src.val)
     else:
-        if i.src.label.isRegister:
+
+
+        if i.src.kind == vkTemp and      i.src.label.isRegister:
             if t.table.contains(dest.label) == false:
                 t.table[dest.label] = t.counter
 

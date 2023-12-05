@@ -18,22 +18,17 @@ proc run(program: string): void =
     let code = translate(lexpr)
 
     let instructions = instructgen(code)
-    
-    for f in instructions:
-        echo f.name
-        for i in f.instructions:
-            echo i
-
     let optimized = optpass(instructions)
-    echo "---------------------------------------------------"
-
-    for f in optimized:
-        echo f.name
-        for i in f.instructions:
-            echo i
+    
+    # for f in optimized:
+    #     echo f.name
+    #     for i in f.instructions:
+    #         echo i
 
     let asmCode = codegenFrames(optimized)
-    echo asmCode
+    
+    
+    writeFile("asm/out.asm", asmCode)
 
 
 

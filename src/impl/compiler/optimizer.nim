@@ -52,7 +52,6 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
         case instr.kind
         of ikMov:
             if instr.src.kind == vkTemp:
-                
                 # Check if the source is a constant in the table
                 if instr.src.label in constTable:
                     # get the const value
@@ -143,7 +142,6 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
                 if str.startswith("v"):
                     result.add(i)
                 else:
-                    echo "discarding: ", i.kind, " ", i.dst.label, " ", i.src.label, " ", i.src2.label
                     discard
             else:
                 result.add(i)
@@ -153,12 +151,66 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
 
     return result
 
+
+proc resultOfCallMoved(instructions: seq[Instruction]): seq[Instruction] =
+    var callResultToNextMove = initTable[string, string]()
+    for i in instructions:
+        if i.kind == ikCall:
+            let dst = i.dst
+            assert dst.kind == vkTemp
+            let str = dst.label
+            callResultToNextMove[str] = ""
+        elif i.kind == ikMov:
+            if i.dst.label.isRegister == true:
+                continue
+            let src = i.src
+            if src.kind != vkTemp:
+                continue
+            let str = src.label
+            if callResultToNextMove.contains(str) == true:
+                callResultToNextMove[str] = i.dst.label
+        else:
+            discard
+
+    var discardMoves = initTable[string, bool]()
+    result = @[]
+    for i in instructions:
+        if i.kind == ikCall:
+            let dst = i.dst
+            assert dst.kind == vkTemp
+            let str = dst.label
+            if callResultToNextMove.contains(str) == true:
+                let newDest = callResultToNextMove[str]
+                if callResultToNextMove[str] != "":
+                    discardMoves[newDest] = true
+
+                    let newCallI = Instruction(kind: i.kind, dst: Value(kind: vkTemp, label: newDest), src: i.src)
+                    result.add(newCallI)
+                else:
+                    result.add(i)
+            else:
+                result.add(i)
+        elif i.kind == ikMov:
+            let dst = i.dst
+            assert dst.kind == vkTemp
+            let str = dst.label
+            if discardMoves.contains(str) == true:
+                discard
+            else:
+                result.add(i)
+        else:
+            result.add(i)
+
+    return result
+
+
 proc optimizeInstructions(instructions: seq[Instruction]): seq[Instruction] =
     var newInstructions = reduceConstantOperations(instructions)
     if aggresive == true:
         discard
         newInstructions = sourceOfSourceIsConst(newInstructions)
     newInstructions = removeUnusedTemps(newInstructions)
+    newInstructions = resultOfCallMoved(newInstructions)
     return newInstructions
 
 

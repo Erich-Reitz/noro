@@ -47,6 +47,8 @@ proc `$`*(v: Value): string =
 var temps = 0
 proc generateInstruction(node: AstBinOp): seq[Instruction]
 
+proc generateCallInstructionos(node: AstCall): seq[Instruction]
+
 proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
     case side.kind
     of akConst:
@@ -60,9 +62,43 @@ proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
         return newDest
     of akLabel:
         return side.labelExpr.label.toLabel
+    of akCall:
+        let callExpr = side.callExpr
+        let callInstructions = generateCallInstructionos(callExpr)
+        instructions.add(callinstructions)
+        return temps.fromTempIntToLabelValue
     else:
         echo "Unsupported expression side: ", side.kind
         quit QuitFailure
+
+
+proc generateCallInstructionos(node: AstCall): seq[Instruction] =
+    let rhsTempInt = temps.fromTempIntToLabelValue
+    let funcname = node.fun.toLabel
+    var callinstructions = newSeq[Instruction]()
+    var argCount = 0
+    let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+    for arg in node.args:
+        
+        if argCount > 6:
+            echo "Too many arguments, only 6 are supported"
+            quit QuitFailure
+
+        # generate code for evaluating the argument
+        let argTemp = processSide(arg, callinstructions)
+        let reg = registers[argCount].toLabel
+        # generate an artificial move instruction to move the temp to the assembly register
+        callinstructions.add(Instruction(kind: ikMov, dst: reg, src: argTemp))
+        argCount += 1
+    
+
+    # add an instruction to invoke call
+    callinstructions.add(Instruction(kind: ikCall, dst: rhsTempInt, src: funcname))
+
+    return callinstructions
+
+
+
 
 proc generateInstruction(node: AstBinOp): seq[Instruction] =
     var instructions = newSeq[Instruction]()
@@ -121,34 +157,13 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
         let rhsTempInt = temps.fromTempIntToLabelValue
         # generate call instructions, with the temp as the destination
         let callExpr = node.src.callExpr
-
-        let funcname = callExpr.fun.toLabel
         # evaluate the arguments, then move them to assembly registers
-
-        var callinstructions = newSeq[Instruction]()
-        var argCount = 0
-        let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-        for arg in callExpr.args:
-            
-            if argCount > 6:
-                echo "Too many arguments, only 6 are supported"
-                quit QuitFailure
-
-            # generate code for evaluating the argument
-            let argTemp = processSide(arg, callinstructions)
-            let reg = registers[argCount].toLabel
-            # generate an artificial move instruction to move the temp to the assembly register
-            callinstructions.add(Instruction(kind: ikMov, dst: reg, src: argTemp))
-            argCount += 1
-
-        # add an instruction to invoke call
-        callinstructions.add(Instruction(kind: ikCall, dst: rhsTempInt, src: funcname))
+        let callInstructions = generateCallInstructionos(callExpr)
 
         # add the call instructions to the main instructions
-        instructions.add(callinstructions)
-        # add the move instruction to move the temp to the destination
+        instructions.add(callinstructions)    
+
         instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
-    
     else:
         echo "Unsupported expression: ", node.src.kind
         quit QuitFailure
@@ -209,9 +224,11 @@ proc genfuncbody(funcbody: seq[AstNode]): seq[Instruction] =
     for n in funcbody:
         case n.kind:
         of akMove:
-            instructions.add(generateInstruction(n.moveExpr))
+            let genInstructions = generateInstruction(n.moveExpr)
+            instructions.add(genInstructions)
         of akSeq:
-            instructions.add(genfuncbody(n.seqExpr.stmts))
+            let akSeq = genfuncbody(n.seqExpr.stmts)
+            instructions.add(akSeq)
         of akCJump:
             let jumpInstruction = genCJumpInstructions(n.cjumpExpr)
             instructions.add(jumpInstruction)
@@ -252,9 +269,7 @@ proc instructgen*(nodes: seq[AstNode]): seq[Frame] =
             let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 
             var paramInstructions = newSeq[Instruction]()
-            
             for p in 0..params-1:
-
                 let paramDest = Value(kind: vkTemp, label: "p" & $p)
                 let paramSrc = Value(kind: vkTemp, label: registers[p])
                 
