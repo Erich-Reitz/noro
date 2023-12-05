@@ -5,14 +5,22 @@ import ast
 
 type Tabl = ref object
     counter: int
-    table: Table[string, int]
+    table: Table[string, string]
     parent: Tabl
+
+    labelCounter: int
 
 
 proc newVar*(tb: Tabl, name: string) =
     let counter = tb.counter
     tb.counter += 1
-    tb.table[name] = counter
+    let varname = "v" & $counter
+    tb.table[name] = varname
+
+proc dispenseLabel(tb: Tabl): int =
+    let counter = tb.labelCounter
+    tb.labelCounter += 1
+    return counter
 
 
 method translateExpression(tb: Tabl, exp: Expr): AstNode {.base.} =
@@ -43,7 +51,7 @@ method translateExpression(tb: Tabl, exp: PrimaryExpr): AstNode =
     case exp.kind:
         of pkIden:
             if exp.strValue in tb.table:
-                return AstNode(kind: akTemp, tempExpr: AstTemp(num: tb.table[exp.strValue]))
+                return AstNode(kind: akTemp, tempExpr: AstTemp(label: tb.table[exp.strValue]))
             else:
                 echo "Error: Identifier not found"
                 quit QuitFailure
@@ -73,7 +81,7 @@ proc translate(tb: Tabl, initDecl: InitDeclarator): AstNode =
 
     let rhs = translateExpression(tb, exp)
 
-    let lhs = AstNode(kind: akTemp, tempExpr: AstTemp(num: tb.table[name]))
+    let lhs = AstNode(kind: akTemp, tempExpr: AstTemp(label: tb.table[name]))
 
     # Move rhs to lhs
     return AstNode(kind: akMove, moveExpr: AstMove(dst: lhs, src: rhs))
@@ -135,14 +143,16 @@ method decomposeCondition(tb: Tabl, exp: EqualityExpr): (AstNode, AstNode, RelOp
     #     op*: RelOp
     #     left*: AstNode
     #     right*: AstNode
-    #     trueLabel*: string
     #     falseLabel*: string
+
 proc translateIfStmt(tb: Tabl, ifstmt: IfStmt): AstNode =
     let (lhs, rhs, op) = decomposeCondition(tb, ifstmt.cond)
 
-    let trueLabel = "true_label"
-    let falseLabel = "false_label"
-    let endOfIfLabel = "end_of_if_label"
+
+    let trueLabel = "l" & $dispenseLabel(tb)
+
+    let falseLabel = "l" & $dispenseLabel(tb)
+    let endOfIfLabel = "l" & $dispenseLabel(tb)
 
     let cjump = AstCJump(op: op, left: lhs, right: rhs, trueLabel: AstLabel(
             label: trueLabel), falseLabel: AstLabel(label: falseLabel))
@@ -182,7 +192,12 @@ proc translateIfStmt(tb: Tabl, ifstmt: IfStmt): AstNode =
 
 
 
-
+proc translate(tb: Tabl, bi: BlockItem): AstNode =
+    case bi.kind:
+    of blkDeclaration:
+        return translate(tb, bi.declaration)
+    of blkStatement:
+        return translate(tb, bi.statement)
 
 
 proc translate(tb: Tabl, stm: Stmt): AstNode =
@@ -193,21 +208,29 @@ proc translate(tb: Tabl, stm: Stmt): AstNode =
         return translate(tb, stm.exprStmt)
     of skIf:
         return translateIfStmt(tb, stm.ifStmt)
+    of skCompound:
+        var stmts: seq[AstNode] = @[]
+        for s in stm.compoundStmt.blockItems.items:
+            let node = translate(tb, s)
+            stmts.add(node)
+
+        return AstNode(kind: akSeq, seqExpr: AstSeq(stmts: stmts))
 
 
 
-proc translate(tb: Tabl, bi: BlockItem): AstNode =
+proc translate(tb: Tabl, bi: BlockItem, frameNode: var AstFrame): AstNode =
     case bi.kind:
     of blkDeclaration:
+        frameNode.localvars = frameNode.localvars + 1
         return translate(tb, bi.declaration)
     of blkStatement:
         return translate(tb, bi.statement)
 
 
-proc translate(tb: Tabl, body: CompoundStmt): AstSeq =
+proc translate(tb: Tabl, body: CompoundStmt, frameNode: var AstFrame): AstSeq =
     var stmts: seq[AstNode] = @[]
     for s in body.blockItems.items:
-        let node = translate(tb, s)
+        let node = translate(tb, s, frameNode)
         stmts.add(node)
 
     return AstSeq(stmts: stmts)
@@ -224,7 +247,7 @@ proc translate(tb: Tabl, funcdef: FuncDef): AstNode =
         newVar(tb, p.name)
 
     # Translate the function body
-    frameNode.body = translate(tb, body)
+    frameNode.body = translate(tb, body, frameNode)
 
     # Wrap the frame in an AstNode
     return AstNode(kind: akFrame, frameExpr: frameNode)
@@ -242,7 +265,8 @@ proc translate(tb: Tabl, externalDecl: ExternalDecl): AstNode =
 
 
 proc translate*(p: Program): seq[AstNode] =
-    let tb = Tabl(counter: 0, table: initTable[string, int](), parent: nil)
+    let tb = Tabl(counter: 0, table: initTable[string, string](), parent: nil)
+    tb.labelCounter = 0
     result = @[]
     for externalDecl in p.externalDecls:
         result.add(translate(tb, externalDecl))

@@ -54,8 +54,8 @@ proc semAnalysis*(p: Program) =
     gatherDeclarations(tb, p)
     typecheck(tb, p)
 
-    if functionsReturn(p) == false:
-        echo "Error: not all functions return"
-        quit(1)
+    # if functionsReturn(p) == false:
+    #     echo "Error: not all functions return"
+    #     quit(1)
 
 

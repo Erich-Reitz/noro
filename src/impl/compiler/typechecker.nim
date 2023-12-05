@@ -256,6 +256,18 @@ proc typecheckIfStmt(tb: SymbolTable, ifStmt: IfStmt,
     if ifStmt.elseStmt != nil:
         typecheckStatement(tb, ifStmt.elseStmt, expectedType)
 
+
+proc typecheckCompoundStmt(tb: SymbolTable, cStmt: CompoundStmt,
+        expectedType: TypeSpecifer) =
+
+    for bi in cStmt.blockItems:
+        case bi.kind
+        of blkDeclaration:
+            typecheckDeclaration(tb, bi.declaration)
+        of blkStatement:
+            typecheckStatement(tb, bi.statement, expectedType)
+
+
 proc typecheckStatement(tb: SymbolTable, stm: Stmt,
         expectedType: TypeSpecifer) =
     case stm.kind:
@@ -265,6 +277,10 @@ proc typecheckStatement(tb: SymbolTable, stm: Stmt,
         typecheckReturnStmt(tb, stm.returnStmt, expectedType)
     of skIf:
         typecheckIfStmt(tb, stm.ifStmt, expectedType)
+    of skCompound:
+        typecheckCompoundStmt(tb, stm.compoundStmt, expectedType)
+
+
 
 
 proc typecheckFuncDef(tb: SymbolTable, funcDef: FuncDef) =
@@ -277,13 +293,7 @@ proc typecheckFuncDef(tb: SymbolTable, funcDef: FuncDef) =
     let retType = funcdef.returnType
 
     # check body
-
-    for bi in funcdef.body.blockItems:
-        case bi.kind
-        of blkDeclaration:
-            typecheckDeclaration(newTb, bi.declaration)
-        of blkStatement:
-            typecheckStatement(newTb, bi.statement, retType)
+    typecheckCompoundStmt(newTb, funcdef.body, retType)
 
 
 proc typecheckExternalDecl(tb: SymbolTable, decl: ExternalDecl) =

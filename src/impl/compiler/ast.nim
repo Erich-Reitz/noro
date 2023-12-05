@@ -23,7 +23,7 @@ type
     label*: string
 
   AstTemp* = object
-    num*: int
+    label*: string
 
   AstBinOp* = object
     op*: BinOp
@@ -98,6 +98,7 @@ type
   AstFrame* = object
     name*: string
     body*: AstSeq
+    localvars*: int
 
 
 
@@ -162,7 +163,7 @@ proc debugPrint*(node: AstNode, depth: int = 0): void =
   of akName:
     echo indent, "AstName: ", node.nameExpr.label
   of akTemp:
-    echo indent, "AstTemp: ", node.tempExpr.num
+    echo indent, "AstTemp: ", node.tempExpr.label
   of akBinOp:
     echo indent, "AstBinOp: ", node.binOpExpr.op
     debugPrint(node.binOpExpr.left, depth + 2)

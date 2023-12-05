@@ -168,7 +168,7 @@ type
 
 
     StmtKind* = enum
-        skReturn, skExpr, skIf
+        skReturn, skExpr, skIf, skCompound
 
     Stmt* = ref object
         case kind*: StmtKind
@@ -178,9 +178,11 @@ type
             exprStmt*: ExprStmt
         of skIf:
             ifStmt*: IfStmt
+        of skCompound:
+            compoundStmt*: CompoundStmt
 
 
-    CompoundStmt* = ref object
+    CompoundStmt* = object
         blockItems*: seq[BlockItem]
 
     FuncDef* = object

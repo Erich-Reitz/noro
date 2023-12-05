@@ -6,6 +6,10 @@ import impl/status
 import impl/compiler/sempass
 import impl/compiler/translate
 import impl/compiler/ast
+import impl/compiler/codegen
+import impl/compiler/instruct
+import impl/compiler/optimizer
+
 
 proc run(program: string): void =
     let tokens = lex(program)
@@ -15,6 +19,23 @@ proc run(program: string): void =
 
     for n in code:
         debugPrint(n)
+
+    let instructions = instructgen(code)
+    let optimized = optpass(instructions)
+    for f in optimized:
+        echo f.name
+        for i in f.instructions:
+            if i.src2 != nil:
+                echo i.kind, " ", "dst: ", i.dst, " src: ", i.src, " src2: ", i.src2
+            else:
+                if i.src != nil:
+                    echo i.kind, " ", "dst: ", i.dst, " src: ", i.src
+                else:
+                    echo i.kind, " ", "dst: ", i.dst
+
+
+
+
 
 
 proc runfile(filename: string): int =

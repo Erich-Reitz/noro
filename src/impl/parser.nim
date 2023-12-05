@@ -345,20 +345,17 @@ proc parse_expression_stmt(p: var Parser): ExprStmt =
     return ExprStmt(ex: exp)
 
 proc parse_stmt(p: var Parser): Stmt
+proc parse_compound_stmt(p: var Parser): CompoundStmt
 
 proc parse_if_stmt(p: var Parser): IfStmt =
     discard consume(p, tkIf, "Expected 'if' keyword")
     discard consume(p, tkLeftParen, "Expected '(' after 'if'")
     let cond = parse_expr(p)
     discard consume(p, tkRightParen, "Expected ')' after condition")
-    discard consume(p, tkLeftBrace, "Expected '{' before then statement")
     let then_stmt = parse_stmt(p)
-    discard consume(p, tkRightBrace, "Expected '}' after then statement")
     var else_stmt: Stmt
     if match(p, tkElse):
-        discard consume(p, tkLeftBrace, "Expected '{' before else statement")
         else_stmt = parse_stmt(p)
-        discard consume(p, tkRightBrace, "Expected '}' after else statement")
 
     return IfStmt(cond: cond, thenStmt: then_stmt, elseStmt: else_stmt)
 
@@ -372,8 +369,7 @@ proc parse_stmt(p: var Parser): Stmt =
         of tkIf:
             return Stmt(kind: skIf, ifStmt: parse_if_stmt(p))
         else:
-            error(nxt, "Expected statement")
-            raise newException(NoroParseError, "Expected statement")
+            return Stmt(kind: skCompound, compoundStmt: parse_compound_stmt(p))
 
 
 proc is_stmt_begin(t: Token): bool =
