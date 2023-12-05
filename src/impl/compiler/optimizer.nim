@@ -2,42 +2,19 @@ import instruct
 import std/tables
 import std/strutils
 
-let aggresive = false
-# type
-#     InstructionKind* = enum
-#         ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo, ikConditionalJump
-
-#     ValueKind* = enum
-#         vkConst, vkTemp
-
-#     Value* = ref object
-#         case kind*: ValueKind
-#         of vkConst:
-#             val: int
-#         of vkTemp:
-#             label: string
+let aggresive = true
 
 
-
-#     Instruction* = object
-#         kind*: InstructionKind
-#         dst*: Value
-#         src*: Value
-#         src2*: Value
-
-#     Frame* = object
-#         name*: string
-#         instructions*: seq[Instruction]
-
-
-func binOpOfConstants(i: Instruction): bool =
-    if i.kind == ikAdd or i.kind == ikMinus:
+proc binOpOfConstants(i: Instruction): bool =
+    echo "binOpOfConstants", i
+    if i.kind == ikAdd or i.kind == ikMinus or i.kind == ikIntEqual:
         if i.src.kind == vkConst and i.src2.kind == vkConst:
+            echo "binOpOfConstants", i, "true"
             return true
     return false
 
 
-func binOpToMoveOp(i: Instruction): Instruction =
+proc binOpToMoveOp(i: Instruction): Instruction =
     assert binOpOfConstants(i)
     if i.kind == ikAdd:
         let sum = i.src.val + i.src2.val
@@ -45,6 +22,12 @@ func binOpToMoveOp(i: Instruction): Instruction =
     elif i.kind == ikMinus:
         let diff = i.src.val - i.src2.val
         return Instruction(kind: ikMov, dst: i.dst, src: Value(kind: vkConst, val: diff))
+    elif i.kind == ikIntEqual:
+        let equal = i.src.val == i.src2.val
+        var byteVal = 0
+        if equal == true:
+            byteVal = 1
+        return Instruction(kind: ikMov, dst: i.dst, src: Value(kind: vkConst, val: byteVal))
     else:
         assert false
 
@@ -65,6 +48,7 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
     var constTable = initTable[string, int]()  # Table to map variable names to constant values
     result = @[]
     for i in 0 ..< instructions.len:
+        
         let instr = instructions[i]
         case instr.kind
         of ikMov:
@@ -84,7 +68,7 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
                 result.add(instr)
             else:
                 result.add(instr)
-        of ikAdd, ikMinus:
+        of ikAdd, ikMinus, ikIntEqual:
             # Check if either source is a constant in the table
             var src1 = instr.src
             var src2 = instr.src2
@@ -101,40 +85,56 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
 
     return result
 
-
+# only run for move instructions, because
+# other instructs use "dest" for "src" sometimes.. ConditionalJump example #1
 proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
     # first, get check to see if they are used.
-    
     var used = initTable[string, bool]()
     for i in instructions:
         let dst = i.dst
         assert dst.kind == vkTemp
         let str = dst.label
         
-        
-        used[str] = false
-
-        let src = i.src
-        
-        if src.kind == vkTemp:
-            used[src.label] = true
-        
-        if i.src2 != nil and i.src2.kind == vkTemp:
-            used[i.src2.label] = true
+        if i.kind != ikConditionalJump:
+            used[str] = false
+        else:
+            used[str] = true
+        if i.src != nil:
+            let src = i.src
+            
+            if src.kind == vkTemp:
+                used[src.label] = true
+            
+            if i.src2 != nil and i.src2.kind == vkTemp:
+                used[i.src2.label] = true
     
     used["ret"] = true
     for i in instructions:
-        let dst = i.dst
-        assert dst.kind == vkTemp
-        let str = dst.label
-        if not used[str]:
-            # if not used
-            # if we are in aggresive mode, we can remove all temps
-            if aggresive == false:
-                if str.startswith("v"):
-                    result.add(i)
-                else:
-                    discard
+        if i.kind == ikMov:
+            let dst = i.dst
+            assert dst.kind == vkTemp
+            let str = dst.label
+            if used.contains(str) == true and used[str] == false:
+                if aggresive == false:
+                    if str.startswith("v"):
+                        result.add(i)
+                    else:
+                        discard
+            else:
+                result.add(i)
+        
+        elif i.kind == ikIntEqual:
+            let dest = i.dst
+            assert dest.kind == vkTemp
+            let str = dest.label
+            if used.contains(str) == true and used[str] == false:
+                if aggresive == false:
+                    if str.startswith("v"):
+                        result.add(i)
+                    else:
+                        discard
+            else:
+                result.add(i)
         else:
             result.add(i)
 
@@ -144,6 +144,7 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
 proc optimizeInstructions(instructions: seq[Instruction]): seq[Instruction] =
     var newInstructions = reduceConstantOperations(instructions)
     if aggresive == true:
+        discard
         newInstructions = sourceOfSourceIsConst(newInstructions)
     newInstructions = removeUnusedTemps(newInstructions)
     return newInstructions
@@ -152,7 +153,7 @@ proc optimizeInstructions(instructions: seq[Instruction]): seq[Instruction] =
 
 proc opt(frame: Frame): Frame =
     var newFrame = Frame(name: frame.name)
-
+    
     var newInstructions = frame.instructions
     var iterations = 0
     const maxIterations = 10

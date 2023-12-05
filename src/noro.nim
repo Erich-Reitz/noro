@@ -32,7 +32,8 @@ proc run(program: string): void =
                     echo i.kind, " ", "dst: ", i.dst, " src: ", i.src
                 else:
                     echo i.kind, " ", "dst: ", i.dst
-
+    let asmCode = codegenFrames(optimized)
+    echo asmCode
 
 
 
