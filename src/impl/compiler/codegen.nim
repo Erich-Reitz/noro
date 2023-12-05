@@ -35,6 +35,10 @@ proc `+=`(c: Ctx, s: string) =
     c.code.add(s)
 
 
+func isRegister(str: string): bool =
+    @["rdi", "rsi", "rdx", "rcx", "r8", "r9", "rax", "rbx", "r10", "r11", "r12", "r13", "r14", "r15"].contains(str)
+
+
 func isInstructionWhichStoresTemp(i: Instruction): bool =
     case i.kind
     of ikMov:
@@ -56,10 +60,8 @@ proc localvars(instructions: seq[Instruction]): int =
 
 proc codeGenMoveInstruction(t: GenTable,
         i: Instruction): string =
+    
     assert i.kind == ikMov
-
-
-
     let dest = i.dst
 
     if dest.label == "ret":
@@ -73,29 +75,42 @@ proc codeGenMoveInstruction(t: GenTable,
             return "    mov rax, " & $(i.src.val) & "\n" &
                "    jmp .end"
 
-
-    if t.table.contains(dest.label) == false:
-        t.table[dest.label] = t.counter
-
-        t.counter += 1
-    let src = i.src
-    case dest.kind
-    of vkTemp:
-        case src.kind
+    if dest.label.isRegister:
+        case i.src.kind
         of vkTemp:
-            # first move the value of src into rax
-            let srcName = src.label
+            let srcName = i.src.label
             let srcIndex = t[srcName]
-            return "    mov rax, [rbp - " & $(srcIndex * 8) & "]\n" &
-                   "    mov [rbp - " & $(t[dest.label] * 8) & "], rax"
+            return "    mov " & dest.label & ", [rbp - " & $(srcIndex * 8) & "]"
         of vkConst:
-            let destName = dest.label
-            let destIndex = t[destName]
-            return "    mov qword [rbp - " & $(destIndex * 8) & "], " & $(src.val)
-        else:
-            return "    "
+            return "    mov " & dest.label & ", " & $(i.src.val)
     else:
-        return "    "
+        if i.src.label.isRegister:
+            if t.table.contains(dest.label) == false:
+                t.table[dest.label] = t.counter
+
+                t.counter += 1
+            return "    mov qword [rbp - " & $(t[dest.label] * 8) & "], " & i.src.label
+        else:
+            if t.table.contains(dest.label) == false:
+                t.table[dest.label] = t.counter
+
+                t.counter += 1
+            let src = i.src
+            case dest.kind
+            of vkTemp:
+                case src.kind
+                of vkTemp:
+                    # first move the value of src into rax
+                    let srcName = src.label
+                    let srcIndex = t[srcName]
+                    return "    mov rax, [rbp - " & $(srcIndex * 8) & "]\n" &
+                        "    mov [rbp - " & $(t[dest.label] * 8) & "], rax"
+                of vkConst:
+                    let destName = dest.label
+                    let destIndex = t[destName]
+                    return "    mov qword [rbp - " & $(destIndex * 8) & "], " & $(src.val)
+            else:
+                return "    "
 
 proc codeGenIntEqual(t: GenTable, i: Instruction): string =
     assert i.kind == ikIntEqual
@@ -112,21 +127,23 @@ proc codeGenIntEqual(t: GenTable, i: Instruction): string =
     of vkTemp:
         case rhsCompare.kind
         of vkTemp:
+            # # first move the value of src into rax
             let destName = dest.label
             let lhsName = lhsCompare.label
             let rhsName = rhsCompare.label
             let destIndex = t[destName]
             let lhsIndex = t[lhsName]
             let rhsIndex = t[rhsName]
-            return "    cmp [rbp - " & $(lhsIndex * 8) & "], [rbp - " & $(
-                    rhsIndex * 8) & "]\n" &
+            # move rhs to rax
+            return "    mov rax, [rbp - " & $(rhsIndex * 8) & "]\n" &
+                   "    cmp [rbp - " & $(lhsIndex * 8) & "], rax\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
         of vkConst:
             let destName = dest.label
             let lhsName = lhsCompare.label
             let destIndex = t[destName]
             let lhsIndex = t[lhsName]
-            return "    cmp [rbp - " & $(lhsIndex * 8) & "], " & $(
+            return "    cmp qword [rbp - " & $(lhsIndex * 8) & "], " & $(
                     rhsCompare.val) & "\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
     of vkConst:
@@ -136,15 +153,16 @@ proc codeGenIntEqual(t: GenTable, i: Instruction): string =
             let rhsName = rhsCompare.label
             let destIndex = t[destName]
             let rhsIndex = t[rhsName]
-            return "    cmp " & $(lhsCompare.val) & ", [rbp - " & $(rhsIndex *
-                    8) & "]\n" &
+            return "    cmp qword [rbp - " & $(rhsIndex * 8) & "], " & $(
+                    lhsCompare.val) & "\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
         of vkConst:
             let destName = dest.label
             let destIndex = t[destName]
-            return "    cmp " & $(lhsCompare.val) & ", " & $(rhsCompare.val) &
-                    "\n" &
+            return "    cmp qword " & $(lhsCompare.val) & ", " & $(
+                    rhsCompare.val) & "\n" &
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
+            
 
 
 proc codegenConditionalJump(t: GenTable,
@@ -250,6 +268,17 @@ proc codegen(t: GenTable, i: Instruction): string =
         return "    jmp ." & i.dst.label
     of ikAdd:
         return codegenAdd(t, i)
+    of ikCall:
+        let dest = i.dst
+        assert dest.kind == vkTemp
+        let destName = dest.label
+        if t.table.contains(destName) == false:
+            t.table[destName] = t.counter
+            t.counter += 1
+        
+        let destIndex = t[destName]
+        return "    call " & i.src.label & "\n" &
+               "    mov [rbp - " & $(destIndex * 8) & "], rax"
     else:
         echo "codegen: unhandled instruction kind: ", i.kind
         quit QuitFailure

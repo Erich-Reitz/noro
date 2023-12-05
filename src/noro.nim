@@ -18,8 +18,15 @@ proc run(program: string): void =
     let code = translate(lexpr)
 
     let instructions = instructgen(code)
-    let optimized = optpass(instructions)
     
+    for f in instructions:
+        echo f.name
+        for i in f.instructions:
+            echo i
+
+    let optimized = optpass(instructions)
+    echo "---------------------------------------------------"
+
     for f in optimized:
         echo f.name
         for i in f.instructions:

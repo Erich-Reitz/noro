@@ -3,7 +3,7 @@ import ast
 type
     InstructionKind* = enum
         ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo,
-            ikConditionalJump, ikReturn
+            ikConditionalJump, ikReturn, ikCall
 
     ValueKind* = enum
         vkConst, vkTemp
@@ -116,6 +116,39 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
         instructions.add(binopinstructions)
         # add the move instruction to move the temp to the destination
         instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
+    of akCall:
+        # when we have a call on the right hand side, we need to generate a temp
+        let rhsTempInt = temps.fromTempIntToLabelValue
+        # generate call instructions, with the temp as the destination
+        let callExpr = node.src.callExpr
+
+        let funcname = callExpr.fun.toLabel
+        # evaluate the arguments, then move them to assembly registers
+
+        var callinstructions = newSeq[Instruction]()
+        var argCount = 0
+        let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+        for arg in callExpr.args:
+            
+            if argCount > 6:
+                echo "Too many arguments, only 6 are supported"
+                quit QuitFailure
+
+            # generate code for evaluating the argument
+            let argTemp = processSide(arg, callinstructions)
+            let reg = registers[argCount].toLabel
+            # generate an artificial move instruction to move the temp to the assembly register
+            callinstructions.add(Instruction(kind: ikMov, dst: reg, src: argTemp))
+            argCount += 1
+
+        # add an instruction to invoke call
+        callinstructions.add(Instruction(kind: ikCall, dst: rhsTempInt, src: funcname))
+
+        # add the call instructions to the main instructions
+        instructions.add(callinstructions)
+        # add the move instruction to move the temp to the destination
+        instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
+    
     else:
         echo "Unsupported expression: ", node.src.kind
         quit QuitFailure

@@ -4,6 +4,8 @@ import std/strutils
 
 let aggresive = true
 
+func isRegister(str: string): bool =
+    @["rdi", "rsi", "rdx", "rcx", "r8", "r9", "rax", "rbx", "r10", "r11", "r12", "r13", "r14", "r15"].contains(str)
 
 proc binOpOfConstants(i: Instruction): bool =
     if i.kind == ikAdd or i.kind == ikMinus or i.kind == ikIntEqual:
@@ -97,6 +99,13 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
     for i in instructions:
         let dst = i.dst
         assert dst.kind == vkTemp
+        if dst.label == "ret":
+            discard
+
+        if dst.label.startsWith("r"):
+            continue
+
+
         let str = dst.label
 
         if i.kind != ikConditionalJump:
