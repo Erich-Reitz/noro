@@ -19,6 +19,11 @@ proc run(program: string): void =
 
     let instructions = instructgen(code)
     let optimized = optpass(instructions)
+    
+    for f in optimized:
+        echo f.name
+        for i in f.instructions:
+            echo i
 
     let asmCode = codegenFrames(optimized)
     echo asmCode

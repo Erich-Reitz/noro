@@ -99,6 +99,7 @@ type
     name*: string
     body*: AstSeq
     localvars*: int
+    params*: int
 
 
 

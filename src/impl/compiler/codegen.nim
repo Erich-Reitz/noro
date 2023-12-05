@@ -4,8 +4,32 @@ import std/tables
 
 type Ctx = ref object
     code*: string
+ 
+type GenTable = ref object
+    table*: Table[string, int]
+    counter*: int 
 
-var counter = 1
+proc `[]`(t: GenTable, s: string): int =
+    if t.table.contains(s):
+        return t.table[s]
+    else:
+        # if s is a register, return its position in the 6 param pass registers
+        if s == "rdi":
+            return 0
+        elif s == "rsi":
+            return 1
+        elif s == "rdx":
+            return 2
+        elif s == "rcx":
+            return 3
+        elif s == "r8":
+            return 4
+        elif s == "r9":
+            return 5
+        else:
+            echo "codegen: unknown register: ", s
+            quit QuitFailure
+            
 
 proc `+=`(c: Ctx, s: string) =
     c.code.add(s)
@@ -30,7 +54,7 @@ proc localvars(instructions: seq[Instruction]): int =
     return total
 
 
-proc codeGenMoveInstruction(t: var TableRef[string, int],
+proc codeGenMoveInstruction(t: GenTable,
         i: Instruction): string =
     assert i.kind == ikMov
 
@@ -39,23 +63,31 @@ proc codeGenMoveInstruction(t: var TableRef[string, int],
     let dest = i.dst
 
     if dest.label == "ret":
-        return "    mov rax, " & $(i.src.val) & "\n" &
+        case i.src.kind:
+        of vkTemp:
+            let srcName = i.src.label
+            let srcIndex = t[srcName]
+            return "    mov rax, [rbp - " & $(srcIndex * 8) & "]\n" &
+                   "    jmp .end"
+        of vkConst:
+            return "    mov rax, " & $(i.src.val) & "\n" &
                "    jmp .end"
 
 
-    t[dest.label] = counter
-    counter += 1
+    if t.table.contains(dest.label) == false:
+        t.table[dest.label] = t.counter
+
+        t.counter += 1
     let src = i.src
     case dest.kind
     of vkTemp:
         case src.kind
         of vkTemp:
-            let destName = dest.label
+            # first move the value of src into rax
             let srcName = src.label
-            let destIndex = t[destName]
             let srcIndex = t[srcName]
-            return "    mov qword [rbp - " & $(destIndex * 8) & "], [rbp - " &
-                    $(srcIndex * 8) & "]"
+            return "    mov rax, [rbp - " & $(srcIndex * 8) & "]\n" &
+                   "    mov [rbp - " & $(t[dest.label] * 8) & "], rax"
         of vkConst:
             let destName = dest.label
             let destIndex = t[destName]
@@ -65,12 +97,12 @@ proc codeGenMoveInstruction(t: var TableRef[string, int],
     else:
         return "    "
 
-proc codeGenIntEqual(t: var TableRef[string, int], i: Instruction): string =
+proc codeGenIntEqual(t: GenTable, i: Instruction): string =
     assert i.kind == ikIntEqual
 
     let dest = i.dst
-    t[dest.label] = counter
-    counter += 1
+    t.table[dest.label] = t.counter
+    t.counter += 1
     let lhsCompare = i.src
     let rhsCompare = i.src2
 
@@ -115,7 +147,7 @@ proc codeGenIntEqual(t: var TableRef[string, int], i: Instruction): string =
                    "    sete byte [rbp - " & $(destIndex * 8) & "]"
 
 
-proc codegenConditionalJump(t: var TableRef[string, int],
+proc codegenConditionalJump(t: GenTable,
         i: Instruction): string =
     assert i.kind == ikConditionalJump
 
@@ -145,7 +177,7 @@ proc codegenConditionalJump(t: var TableRef[string, int],
         return "    cmp byte [rbp - " & $(destIndex * 8) & "], 0\n" &
                "    je ." & src1Name
 
-proc codegenLabelCreate(t: var TableRef[string, int], i: Instruction): string =
+proc codegenLabelCreate(t: GenTable, i: Instruction): string =
     assert i.kind == ikLabelCreate
 
     let dest = i.dst
@@ -154,7 +186,57 @@ proc codegenLabelCreate(t: var TableRef[string, int], i: Instruction): string =
 
     return "." & destName & ":\n"
 
-proc codegen(t: var TableRef[string, int], i: Instruction): string =
+
+proc codegenAdd(t: GenTable, i: Instruction): string =
+    assert i.kind == ikAdd
+
+    let dest = i.dst
+    assert dest.kind == vkTemp
+
+    
+    let destName = dest.label
+    
+    if t.table.contains(destName) == false:
+        t.table[destName] = t.counter
+        t.counter += 1
+    
+    let destIndex = t[destName]
+
+    let lhs = i.src
+    let rhs = i.src2
+
+    case lhs.kind
+    of vkTemp:
+        case rhs.kind
+        of vkTemp:
+            let lhsName = lhs.label
+            let rhsName = rhs.label
+            let lhsIndex = t[lhsName]
+            let rhsIndex = t[rhsName]
+            return "    mov rax, [rbp - " & $(lhsIndex * 8) & "]\n" &
+                   "    add rax, [rbp - " & $(rhsIndex * 8) & "]\n" &
+                   "    mov [rbp - " & $(destIndex * 8) & "], rax"
+        of vkConst:
+            let lhsName = lhs.label
+            let lhsIndex = t[lhsName]
+            return "    mov rax, [rbp - " & $(lhsIndex * 8) & "]\n" &
+                   "    add rax, " & $(rhs.val) & "\n" &
+                   "    mov [rbp - " & $(destIndex * 8) & "], rax"
+    of vkConst:
+        case rhs.kind
+        of vkTemp:
+            let rhsName = rhs.label
+            let rhsIndex = t[rhsName]
+            return "    mov rax, " & $(lhs.val) & "\n" &
+                   "    add rax, [rbp - " & $(rhsIndex * 8) & "]\n" &
+                   "    mov [rbp - " & $(destIndex * 8) & "], rax"
+        of vkConst:
+            return "    mov rax, " & $(lhs.val) & "\n" &
+                   "    add rax, " & $(rhs.val) & "\n" &
+                   "    mov [rbp - " & $(destIndex * 8) & "], rax"
+
+
+proc codegen(t: GenTable, i: Instruction): string =
     case i.kind
     of ikMov:
         return codeGenMoveInstruction(t, i)
@@ -166,6 +248,8 @@ proc codegen(t: var TableRef[string, int], i: Instruction): string =
         return codegenLabelCreate(t, i)
     of ikLabelJumpTo:
         return "    jmp ." & i.dst.label
+    of ikAdd:
+        return codegenAdd(t, i)
     else:
         echo "codegen: unhandled instruction kind: ", i.kind
         quit QuitFailure
@@ -186,7 +270,13 @@ proc codegen(c: Ctx, n: Frame) =
     c += $(localvars * 8)
     c += "\n"
 
-    var tb = newTable[string, int]()
+    
+
+
+    var tb = GenTable()
+    tb.table = Table[string, int]()
+    tb.counter = 1
+
     for i in n.instructions:
         c += codegen(tb, i)
         c += "\n"

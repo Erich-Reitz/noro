@@ -94,6 +94,8 @@ proc generateInstruction(node: AstBinOp): seq[Instruction] =
     return instructions
 
 
+
+
 proc generateInstruction(node: AstMove): seq[Instruction] =
     var instructions = newSeq[Instruction]()
     let dest = node.dst.tempExpr.label.toLabel
@@ -115,17 +117,11 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
         # add the move instruction to move the temp to the destination
         instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
     else:
-        echo "generating instructions for move failed"
+        echo "Unsupported expression: ", node.src.kind
         quit QuitFailure
 
     return instructions
 
-#   AstCJump* = object
-#     op*: RelOp
-#     left*: AstNode
-#     right*: AstNode
-#     trueLabel*: AstLabel
-#     falseLabel*: AstLabel
 
 
 proc genCJumpInstructions(a: AstCJump): seq[Instruction] =
@@ -212,8 +208,33 @@ proc instructgen*(nodes: seq[AstNode]): seq[Frame] =
         case node.kind
         of akFrame:
             let name = node.frameExpr.name
+            let params = node.frameExpr.params
+
+            # so also when you have a frame, you have params.
+            # i placed these in special p0, p1 IR..
+            # so we need "glue instructions" to move these from their assembly registers to 
+            # the stack
+            # so we need to generate instructions for these params
+            # and add them to the frame instructions
+            let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+
+            var paramInstructions = newSeq[Instruction]()
+            
+            for p in 0..params-1:
+
+                let paramDest = Value(kind: vkTemp, label: "p" & $p)
+                let paramSrc = Value(kind: vkTemp, label: registers[p])
+                
+                paramInstructions.add(Instruction(kind: ikMov, dst: paramDest, src: paramSrc))
+            
             let bodyinstructinos = genfuncbody(node.frameExpr.body.stmts)
-            frames.add(Frame(name: name, instructions: bodyinstructinos))
+
+            
+
+            frames.add(Frame(name: name, instructions: paramInstructions & bodyinstructinos))
+
+            
+
         else: discard
 
 

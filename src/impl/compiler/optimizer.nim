@@ -46,11 +46,11 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
     var constTable = initTable[string, int]() # Table to map variable names to constant values
     result = @[]
     for i in 0 ..< instructions.len:
-
         let instr = instructions[i]
         case instr.kind
         of ikMov:
             if instr.src.kind == vkTemp:
+                
                 # Check if the source is a constant in the table
                 if instr.src.label in constTable:
                     # get the const value
@@ -64,8 +64,11 @@ proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
                     result.add(instr)
             elif instr.src.kind == vkConst:
                 # Update the table with the constant value of the variable
-                constTable[instr.dst.label] = instr.src.val
-                result.add(instr)
+                if instr.dst.label.startsWith("v"):
+                    result.add(instr)
+                else:
+                    constTable[instr.dst.label] = instr.src.val
+                    result.add(instr)
             else:
                 result.add(instr)
         of ikAdd, ikMinus, ikIntEqual:
@@ -116,11 +119,10 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
             assert dst.kind == vkTemp
             let str = dst.label
             if used.contains(str) == true and used[str] == false:
-                if aggresive == false:
-                    if str.startswith("v"):
-                        result.add(i)
-                    else:
-                        discard
+                if str.startswith("v"):
+                    result.add(i)
+                else:
+                    discard
             else:
                 result.add(i)
 
@@ -129,11 +131,11 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
             assert dest.kind == vkTemp
             let str = dest.label
             if used.contains(str) == true and used[str] == false:
-                if aggresive == false:
-                    if str.startswith("v"):
-                        result.add(i)
-                    else:
-                        discard
+                if str.startswith("v"):
+                    result.add(i)
+                else:
+                    echo "discarding: ", i.kind, " ", i.dst.label, " ", i.src.label, " ", i.src2.label
+                    discard
             else:
                 result.add(i)
         else:

@@ -17,6 +17,12 @@ proc newVar*(tb: Tabl, name: string) =
     let varname = "v" & $counter
     tb.table[name] = varname
 
+proc newParam*(tb: Tabl, name: string) =
+    let counter = tb.counter
+    tb.counter += 1
+    let varname = "p" & $counter
+    tb.table[name] = varname
+
 proc dispenseLabel(tb: Tabl): int =
     let counter = tb.labelCounter
     tb.labelCounter += 1
@@ -26,6 +32,22 @@ proc dispenseLabel(tb: Tabl): int =
 method translateExpression(tb: Tabl, exp: Expr): AstNode {.base.} =
     echo "base methods called for expression"
     quit QuitFailure
+
+
+
+#   AstCall* = object
+#     fun*: string
+#     args*: seq[AstNode]
+method translateExpression(tb: Tabl, exp: CallExpr): AstNode =
+    let funName = exp.callee.strValue
+    let args = exp.args
+
+    var argNodes: seq[AstNode] = @[]
+    for arg in args:
+        argNodes.add(translateExpression(tb, arg))
+    
+    let callNode = AstCall(fun: funName, args: argNodes)
+    return AstNode(kind: akCall, callExpr: callNode)
 
 method translateExpression(tb: Tabl, exp: AssignmentExpr): AstNode =
     let lhs = translateExpression(tb, exp.lhs)
@@ -244,7 +266,8 @@ proc translate(tb: Tabl, funcdef: FuncDef): AstNode =
     frameNode.name = name
 
     for p in params:
-        newVar(tb, p.name)
+        newParam(tb, p.name)
+        frameNode.params = frameNode.params + 1
 
     # Translate the function body
     frameNode.body = translate(tb, body, frameNode)

@@ -164,7 +164,6 @@ proc parse_argument_expression_list(p: var Parser): seq[Expr] =
     return args
 
 proc parse_postfix(p: var Parser): Expr =
-    var nxt = peek(p)
     var primary_expr = parse_primary_expr(p)
     if match(p, tkLeftParen):
         let arg_list = parse_argument_expression_list(p)
