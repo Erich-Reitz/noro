@@ -65,7 +65,7 @@ proc indicates_function_specifier(token: Token): bool =
     token.typ == tkFun or is_function_specifier(token)
 
 proc is_type_specifier(token: Token): bool =
-    token.typ == tkIntDecl or token.typ == tkString or
+    token.typ == tkIntDecl or token.typ == tkStringDecl or
     token.typ == tkBoolDecl or token.typ == tkIdentifier
 
 proc to_type_specifier(token: Token): TypeSpecifer =
@@ -74,7 +74,7 @@ proc to_type_specifier(token: Token): TypeSpecifer =
             return TypeSpecifer(kind: tsKindBnType, builtinType: binTypeBool)
         of tkIntDecl:
             return TypeSpecifer(kind: tsKindBnType, builtinType: binTypeInt)
-        of tkString:
+        of tkStringDecl:
             return TypeSpecifer(kind: tsKindBnType, builtinType: binTypeString)
         of tkIdentifier:
             return TypeSpecifer(kind: tsKindDecl, typeDecl: TypeDecl(

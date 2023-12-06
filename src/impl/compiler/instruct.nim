@@ -3,10 +3,10 @@ import ast
 type
     InstructionKind* = enum
         ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo,
-            ikConditionalJump, ikReturn, ikCall
+            ikConditionalJump, ikReturn, ikCall, ikStringLabelCreate
 
     ValueKind* = enum
-        vkConst, vkTemp
+        vkConst, vkTemp, vkStringLit
 
     Value* = ref object
         case kind*: ValueKind
@@ -14,6 +14,8 @@ type
             val*: int
         of vkTemp:
             label*: string
+        of vkStringLit:
+            str*: string
 
 
 
@@ -30,6 +32,9 @@ type
 func constInt*(val: int): Value =
     return Value(kind: vkConst, val: val)
 
+func toStrLitValue*(s: string): Value =
+    return Value(kind: vkStringLit, str: s)
+
 func fromTempIntToLabelValue*(val: int): Value =
     let str = "t" & $val
     return Value(kind: vkTemp, label: str)
@@ -43,6 +48,9 @@ proc `$`*(v: Value): string =
         return $v.val
     of vkTemp:
         return v.label
+    of vkStringLit:
+        return v.str
+    
 
 var temps = 0
 proc generateInstruction(node: AstBinOp): seq[Instruction]
@@ -67,6 +75,13 @@ proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
         let callInstructions = generateCallInstructionos(callExpr)
         instructions.add(callinstructions)
         return temps.fromTempIntToLabelValue
+    of akStringLit:
+        let str = side.stringLitExpr.val
+        let strLabel = temps.fromTempIntToLabelValue
+        inc temps
+        instructions.add(Instruction(kind: ikStringLabelCreate, dst: strLabel, src: str.toStrLitValue))
+
+        return strLabel
     else:
         echo "Unsupported expression side: ", side.kind
         quit QuitFailure
@@ -85,7 +100,10 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
             quit QuitFailure
 
         # generate code for evaluating the argument
+        echo "Generating code for argument: ", argCount, " of function: ", funcname
         let argTemp = processSide(arg, callinstructions)
+        echo "Generated code for argument: ", argCount, " of function: ", funcname, " with temp: ", argTemp
+
         let reg = registers[argCount].toLabel
         # generate an artificial move instruction to move the temp to the assembly register
         callinstructions.add(Instruction(kind: ikMov, dst: reg, src: argTemp))
@@ -164,6 +182,12 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
         instructions.add(callinstructions)    
 
         instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
+    of akStringLit:
+        let str = node.src.stringLitExpr.val
+        let strLabel = temps.fromTempIntToLabelValue
+        inc temps
+        instructions.add(Instruction(kind: ikStringLabelCreate, dst: strLabel, src: str.toStrLitValue))
+        instructions.add(Instruction(kind: ikMov, dst: dest, src: strLabel))
     else:
         echo "Unsupported expression: ", node.src.kind
         quit QuitFailure
@@ -242,6 +266,10 @@ proc genfuncbody(funcbody: seq[AstNode]): seq[Instruction] =
             discard
         of akReturn:
             instructions.add(generateInstruction(n.returnExpr))
+        of akCall:
+            let callExpr = n.callExpr
+            let callInstructions = generateCallInstructionos(callExpr)
+            instructions.add(callinstructions)
         else:
             echo "Unsupported expression: ", n.kind
             quit QuitFailure

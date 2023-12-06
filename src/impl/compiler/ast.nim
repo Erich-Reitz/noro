@@ -14,7 +14,7 @@ type
 
   AstExprKind = enum
     akConst, akName, akTemp, akBinOp, akMem, akCall,
-    akMove, akJump, akCJump, akSeq, akLabel, akFrame, akNop, akReturn
+    akMove, akJump, akCJump, akSeq, akLabel, akFrame, akNop, akReturn, akStringLit
 
   AstConst* = object
     val*: int
@@ -36,7 +36,8 @@ type
     fun*: string
     args*: seq[AstNode]
 
-
+  AstStringLit* = object
+    val*: string
 
 
   AstNode* = ref object
@@ -67,6 +68,8 @@ type
       frameExpr*: AstFrame
     of akReturn:
       returnExpr*: AstReturn
+    of akStringLit:
+      stringLitExpr*: AstStringLit
     of akNop:
       discard
 
@@ -203,3 +206,5 @@ proc debugPrint*(node: AstNode, depth: int = 0): void =
     debugPrint(node.returnExpr.exp, depth + 2)
   of akNop:
     echo indent, "AstNop"
+  of akStringLit:
+    echo indent, "AstStringLit: ", node.stringLitExpr.val

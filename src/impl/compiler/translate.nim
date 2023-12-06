@@ -87,9 +87,8 @@ method translateExpression(tb: Tabl, exp: PrimaryExpr): AstNode =
                     val: exp.intValue))
 
         of pkString:
-            echo "String literals not implemented yet"
-            quit QuitFailure
-
+            return AstNode(kind: akStringLit, stringLitExpr: AstStringLit(
+                    val: exp.stringValue))
         of pkParen:
             return translateExpression(tb, exp.exprValue)
 

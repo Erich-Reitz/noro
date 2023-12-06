@@ -45,6 +45,7 @@ proc reduceConstantOperations(instructions: seq[Instruction]): seq[Instruction] 
 
 
 proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
+    echo instructions
     var constTable = initTable[string, int]() # Table to map variable names to constant values
     result = @[]
     for i in 0 ..< instructions.len:
