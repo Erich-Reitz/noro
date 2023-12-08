@@ -188,6 +188,44 @@ function main() -> int {
 }
 ```
 
+### Generated Assembly
+
+The quality of the assembly is poor, but I don't think it represents a flaw in my approach. Further work would take the instructions generated, place them in SSA form, and then perform a register allocation algorithm on them to remove the use of temporaries. I don't believe anything I did permits this, I just didn't have time to write another pass.
+
+```
+max2:
+    push rbp
+    mov rbp, rsp
+                ; from the codegen modules perspective..
+    sub rsp, 64 ;   every temporary variable is just a stack allocated regular variable
+    mov qword [rbp - 8], rdi   ; Glue code to take the parameters and put them in their param0, param1 locations
+    mov qword [rbp - 16], rsi
+    mov rax, [rbp - 8] ; moving the parameters to temporaries. That is how instructions are generated for IntGe
+    mov [rbp - 24], rax ; as the lhs and rhs of IntGe could be arbitrary.
+    mov rax, [rbp - 16]
+    mov [rbp - 32], rax
+    mov rax, [rbp - 32] ; first actual instruction for IntGe
+    cmp [rbp - 24], rax ; instruction sets a flag, no destination
+    setg byte [rbp - 40] ; set a temporary to the result.
+    cmp byte [rbp - 40], 0  ; branch on the result
+    je .l1
+    jmp .l0
+.l0:
+
+    mov rax, [rbp - 8] ; referencing param0
+    jmp .end
+    jmp .l2
+.l1:
+
+    mov rax, [rbp - 16] ; referencing param1
+    jmp .end
+.l2:
+
+.end:
+    leave
+    ret
+```
+
 ## Development Environment
 
 This project is written in the [Nim](https://nim-lang.org/) programming language and requires version 
