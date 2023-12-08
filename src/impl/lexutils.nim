@@ -3,7 +3,7 @@ import std/strutils
 import scanner
 import status
 
-proc lInt*(s: var Scanner): int =
+proc lUint*(s: var Scanner): int =
     while isDigit(peek(s)):
         discard advance(s)
 

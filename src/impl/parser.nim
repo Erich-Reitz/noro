@@ -172,6 +172,7 @@ proc parse_postfix(p: var Parser): Expr =
 
     return primary_expr
 
+
 proc toMultOp(t: Token): MultiplicativeOperator =
     case t.typ:
         of tkStar:

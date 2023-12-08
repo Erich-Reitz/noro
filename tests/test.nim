@@ -115,3 +115,6 @@ suite "integration tests":
 
   test "str_assignment":
     check runTestOfGeneratedExecutable("str_assignment")
+
+  test "neg_number":
+    check runTestOfGeneratedExecutable("neg_number")

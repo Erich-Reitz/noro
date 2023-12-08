@@ -11,7 +11,7 @@ func valueToken(typ: TokenType, lexeme: string, lit: Value,
     Token(typ: typ, lexeme: lexeme, value: lit, line: line)
 
 proc parseNum(s: var Scanner) =
-    let num = lInt(s)
+    let num = lUint(s)
     let lit = Value(kind: lkNum, numVal: num)
     let lexeme = s.source[s.start..s.current-1]
     let line = s.line
@@ -41,6 +41,9 @@ func parseIden(s: var Scanner) =
     let token = valueToken(typ, lexeme, lit, s.line)
 
     s.addToken(token)
+
+func indicatesDigit(c: char, s: Scanner): bool =
+    isDigit(c) or (c == '-' and isDigit(peek(s)))
 
 
 proc scanToken(s: var Scanner) =

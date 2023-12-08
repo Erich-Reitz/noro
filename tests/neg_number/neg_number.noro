@@ -1,0 +1,26 @@
+function writestrnewline(string any) -> int {}
+function writeint(int any) -> int {}
+
+
+function printintnewline(int n) -> int {
+    writeint(n);
+    writestrnewline("");
+    return 0;
+}   
+
+function main() -> int {
+    int negthree = (0-3);
+    int three = 3;
+    if (negthree > three) {
+      writestrnewline("never"); 
+    } 
+
+    printintnewline(negthree);
+
+
+    int negSix = negthree + negthree;
+    printintnewline(negSix);
+    int posSix = negSix * (0-1);
+
+    return posSix + three;
+}
