@@ -125,7 +125,8 @@ proc codeGenMoveInstruction(t: GenTable,
 
 
 
-proc codegenIntCompare(t: GenTable, i: Instruction, instructionAfterCmp: string): string =
+proc codegenIntCompare(t: GenTable, i: Instruction,
+        instructionAfterCmp: string): string =
     let dest = i.dst
     t.table[dest.label] = t.counter
     t.counter += 1

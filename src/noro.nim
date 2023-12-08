@@ -36,10 +36,10 @@ proc runfile(filename: string): int =
 
 proc main() =
     let paramCount = os.paramCount()
-    if paramCount > 1:
-        echo "Usage: ./noro [script]"
+    if paramCount != 1:
+        echo "Usage: ./noro [file]"
         quit(QuitFailure)
-    elif paramCount == 1:
+    else:
         let filename = os.paramStr(1)
         let result = runfile(filename)
         quit(result)

@@ -5,11 +5,11 @@ type NoroTypeError* = object of CatchableError
 proc multipleTypeSpecifiers*(s: string) =
     raise newException(NoroTypeError, "multiple type specifiers")
 
-proc noTypeSpecifiers*(s: string ) =
+proc noTypeSpecifiers*(s: string) =
     raise newException(NoroTypeError, "no type specifiers: ")
 
 
-proc forbidden*(s: string ) =
+proc forbidden*(s: string) =
     raise newException(NoroTypeError, "use of forbidden: " & s)
 
 

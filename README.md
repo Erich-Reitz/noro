@@ -255,7 +255,7 @@ project requires `Nimble` which is bundled with Nim installation. To the build t
 
 ### Commands
 - format: `find src/ -name "*.nim" -exec nimpretty {} \;`
-- build: `nimble build`
+- build: `nimble build --multimethods:on`
 - test: `nimble test`
 
 
@@ -264,11 +264,18 @@ project requires `Nimble` which is bundled with Nim installation. To the build t
     - will generate linux x86 assembly at `./asm/out.asm`
         - may need to create asm folder
     - the `runasm.sh` script will compile and link with some C functions.
+        - need linux x86 environment, NASM
 
 
 ### Testing
-The program used for testing can be viewed at `tests/test.nim`. The program will automatically execute each test case, invoking the lox program with a specific test file located at `tests/<testname>/<testname>.lox`. The expected output is 
-in the same folder, at `tests/<testname>/<testname>.out`.
+
+The program used for testing can be viewed at `tests/test.nim`. The program will automatically execute each test case, invoking the compiler program with a specific test file located at `tests/<testname>/<testname>.noro`. The expected output is 
+in the same folder, at `tests/<testname>/<testname>.out`. The test program captures the output of the process and asserts that it is equal to the expected output for the test. The expected return code for the compiled program is at `<testname>.ret`. 
+
+For tests that check to see if the compiler emits a certain error, the expected stdout of the compiler is at `<testname>.expected_error`
+
+
+
 
 
 

@@ -23,7 +23,8 @@ proc isMarkedForbidden*(vds: seq[VariableDeclSpecifier]): bool =
             discard
     return false
 
-proc singleTypeSpecifier*(varname: string, vds: seq[VariableDeclSpecifier]): TypeSpecifer =
+proc singleTypeSpecifier*(varname: string, vds: seq[
+        VariableDeclSpecifier]): TypeSpecifer =
     var ts: Option[TypeSpecifer] = none(TypeSpecifer)
 
     for vs in vds:

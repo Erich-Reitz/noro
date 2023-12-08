@@ -103,10 +103,10 @@ method typecheckExpr(tb: SymbolTable, exp: PrimaryExpr) =
     else:
         discard
 
-method typecheckExpr(tb: SymbolTable, exp: AssignmentExpr) = 
+method typecheckExpr(tb: SymbolTable, exp: AssignmentExpr) =
     let lhs = cast[PrimaryExpr](exp.lhs)
     let name = lhs.strValue
-    
+
     let lookup = lookup(tb, name)
     if lookup.isNone:
         undeclared(name)
@@ -121,7 +121,7 @@ method typecheckExpr(tb: SymbolTable, exp: AssignmentExpr) =
         of skFunc:
             functionAsValue()
 
-   
+
 
 method typecheckExpr(tb: SymbolTable, exp: CallExpr) =
     let name = exp.callee.strValue
@@ -138,7 +138,8 @@ method typecheckExpr(tb: SymbolTable, exp: CallExpr) =
                 for i in 0..len(funcDef.paramsDeclList)-1:
                     let param = funcDef.paramsDeclList[i]
                     let arg = exp.args[i]
-                    typecheckExpr(tb, arg, singleTypeSpecifier(param.name, param.specifiers))
+                    typecheckExpr(tb, arg, singleTypeSpecifier(param.name,
+                            param.specifiers))
     else:
         undeclared(name)
 
@@ -254,14 +255,14 @@ proc typecheckInitDeclarator(tb: SymbolTable, iDecl: InitDeclarator,
 
 proc typecheckDeclaration(tb: SymbolTable, decl: Declaration) =
     let name = decl.initDeclarator.name
-    
+
     try:
         let typespec = singleTypeSpecifier(name, decl.specifiers)
         typecheckInitDeclarator(tb, decl.initDeclarator, typespec)
     except NoroTypeError as e:
         echo "error duing initalization of <", name, ">: ", e.msg
         quit QuitFailure
-        
+
     let sym = Symbol(kind: skVar, skVar: decl.specifiers)
     tb.table[decl.initDeclarator.name] = sym
 
@@ -299,7 +300,7 @@ proc typecheckCompoundStmt(tb: SymbolTable, cStmt: CompoundStmt,
             typecheckDeclaration(tb, bi.declaration)
         of blkStatement:
             typecheckStatement(tb, bi.statement, expectedType)
-    
+
 
 
 proc typecheckForbidStmt(tb: SymbolTable, fStmt: ForbidStmt,

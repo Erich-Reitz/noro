@@ -64,7 +64,8 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
     for i in 0..<argCount:
         let reg = registers[i].toLabel
         # generate an artificial move instruction to move the temp to the assembly register
-        callinstructions.add(Instruction(kind: ikMov, dst: reg, src: tempResultTempLablels[i]))
+        callinstructions.add(Instruction(kind: ikMov, dst: reg,
+                src: tempResultTempLablels[i]))
 
 
     # add an instruction to invoke call
@@ -143,7 +144,8 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
 
         # add the call instructions to the main instructions
         instructions.add(callinstructions)
-        let moveAfterCallI = Instruction(kind: ikMov, dst: dest, src: rhsTempInt)
+        let moveAfterCallI = Instruction(kind: ikMov, dst: dest,
+                src: rhsTempInt)
         instructions.add(moveAfterCallI)
     of akStringLit:
         let str = node.src.stringLitExpr.val

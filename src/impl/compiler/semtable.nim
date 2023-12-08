@@ -8,7 +8,7 @@ type
         skVar, skFunc
     Symbol* = object
         kind*: SymbolKind
-        skVar*:  seq[VariableDeclSpecifier]
+        skVar*: seq[VariableDeclSpecifier]
         skFunc*: FuncDef
 
     SymbolTable* = ref object
@@ -24,9 +24,10 @@ proc ctxDefined*(tb: SymbolTable, name: string): bool =
         false
 
 # adds the forbidden type qualifer
-proc markForbidden*(tb:  SymbolTable, name: string) =
+proc markForbidden*(tb: SymbolTable, name: string) =
     if tb.table.hasKey(name):
-        tb.table[name].skVar.add(VariableDeclSpecifier(kind: vdsKindTypeQualifier, typeQualifier: tqForbid))
+        tb.table[name].skVar.add(VariableDeclSpecifier(
+                kind: vdsKindTypeQualifier, typeQualifier: tqForbid))
     elif tb.parent != nil:
         markForbidden(tb.parent, name)
 
