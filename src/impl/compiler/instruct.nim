@@ -217,6 +217,7 @@ proc genCJumpInstructions(a: AstCJump): seq[Instruction] =
 
     let compareDest = temps.fromTempIntToLabelValue
     inc temps
+    assert a.op == relOpEq
     # TODO: where change
     instructions.add(Instruction(kind: ikIntEqual, dst: compareDest,
             src: leftDest, src2: rightDest))

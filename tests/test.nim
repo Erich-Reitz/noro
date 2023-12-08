@@ -69,3 +69,5 @@ suite "integration tests":
   test "t4":
     check runTest("t4")
   
+  test "t5":
+    check runTest("t5")

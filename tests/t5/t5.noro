@@ -1,0 +1,33 @@
+// standard library functions
+function writestrnewline(string any) -> int {}
+function writestr(string any) -> int {}
+function writeint(int any) -> int {}
+
+function main() -> int {
+    int five = 5; 
+    int ten = 10; 
+
+    int sumOfFiveAndTen = five + ten;
+    if (sumOfFiveAndTen == 20) {
+        writestrnewline("never"); 
+    } else {
+        writestrnewline("always1"); 
+        if (sumOfFiveAndTen == 15) {
+            writestrnewline("always2"); 
+            int one = 1; 
+            int two = 2; 
+            // mutating 10 in nested scope
+            ten = 9; 
+            if (one + two == 3) {
+                writestrnewline("always3"); 
+            } else {
+                writestrnewline("never3"); 
+            }
+        } else {
+            writestrnewline("never2"); 
+        }
+        writestrnewline("always4");
+    }
+    writestrnewline("always5");
+    return ten;
+}
