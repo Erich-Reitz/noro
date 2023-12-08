@@ -1,14 +1,9 @@
 import std/tables
-import std/sets
 import instruction
 import instructutils
-import std/algorithm
 
 func initMov(dest: Value, src: Value): Instruction =
     return Instruction(kind: ikMov, dst: dest, src: src)
-
-func initCall(dest: Value, name: Value): Instruction =
-    return Instruction(kind: ikCall, dst: dest, src: name)
 
 proc binOpToMoveOp(i: Instruction): Instruction =
     assert isBinaryOperationOfConstants(i)

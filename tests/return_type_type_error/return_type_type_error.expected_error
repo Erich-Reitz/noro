@@ -1,0 +1,1 @@
+error duing initalization of <sum>: type mismatch: wanted (kind: tsKindBnType, builtinType: binTypeBool), got (kind: tsKindBnType, builtinType: binTypeInt)

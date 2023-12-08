@@ -8,7 +8,6 @@ import impl/compiler/translate
 import impl/compiler/codegen
 import impl/compiler/instructgen
 import impl/compiler/optimizer
-import impl/compiler/instruction
 
 
 proc run(program: string): void =
@@ -16,33 +15,8 @@ proc run(program: string): void =
     let lexpr = parse(tokens)
     semAnalysis(lexpr)
     let code = translate(lexpr)
-    # for n in code:
-    #     debugPrint(n)
-
-
     let instructions = instructgen(code)
-    echo "------------------------"
-    var lenInstructions = 0
-    for f in instructions:
-        echo f.name
-        for i in f.instructions:
-            lenInstructions += 1
-            echo i
-
-    echo "number: " & $lenInstructions
-
     let optimized = optpass(instructions)
-
-
-    echo "------------------------"
-    lenInstructions = 0
-    for f in optimized:
-        echo f.name
-        for i in f.instructions:
-            lenInstructions += 1
-            echo i
-
-    echo "number: " & $lenInstructions
     let asmCode = codegenFrames(optimized)
 
 

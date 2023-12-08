@@ -26,7 +26,7 @@ method inferType*(tb: SymbolTable, exp: PrimaryExpr): TypeSpecifer =
             let sym = lookup(tb, name).get
             case sym.kind
             of skVar:
-                return singleTypeSpecifier(sym.skVar)
+                return singleTypeSpecifier(name, sym.skVar)
             of skFunc:
                 functionAsValue()
         else:

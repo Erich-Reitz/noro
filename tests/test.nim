@@ -11,6 +11,12 @@ func testReturnCodeLocation(testname: string): string =
 func testOutputLocation(testname: string): string =
   "tests/" & testname & "/" & testname & ".out"
 
+func testExpectedErrorLocation(testname: string): string =
+  "tests/" & testname & "/" & testname & ".expected_error"
+
+proc expectedErrorMessage(testname: string): string =
+  readFile(testExpectedErrorLocation(testname))
+
 proc expectedTestOutput(testname: string, testStdout= false): (string, int) =
   let expectedRetCode = readFile(testReturnCodeLocation(testname)).parseInt
   if testStdout:
@@ -37,7 +43,7 @@ proc runIntegrationTest(testname: string): (string, int) =
 
 
 
-proc runTest(testname: string, expectStdout = false): bool =
+proc runTestOfGeneratedExecutable(testname: string, expectStdout = false): bool =
   let (output, exitcode) = runIntegrationTest(testname)
   let (expectedTestOutputStr, expectedRetcodeInt) = expectedTestOutput(testname, expectStdout)
   
@@ -46,6 +52,18 @@ proc runTest(testname: string, expectStdout = false): bool =
     return exitcode == expectedRetcodeInt and expectedTestOutputStr == output
   else:
     return exitcode == expectedRetcodeInt
+
+proc runTestOfCompilerErrorChecking(testname: string): bool =
+  let expectedErrorMsg = expectedErrorMessage(testname) 
+  let testFileLoc = testFileLocation(testname)
+
+  var (output, exitcode) = osproc.execCmdEx("./noro " & testFileLoc)
+  # want a non-zero exit code bc error
+  if exitcode == 0:
+    return false
+
+  return output == expectedErrorMsg
+  
 
 suite "integration tests":
   # compile main program once before executing tests
@@ -58,16 +76,34 @@ suite "integration tests":
     discard
     
   test "t1":
-    check runTest("t1") 
+    check runTestOfGeneratedExecutable("t1") 
   
   test "t2":
-    check runTest("t2")
+    check runTestOfGeneratedExecutable("t2")
   
   test "t3":
-    check runTest("t3")
+    check runTestOfGeneratedExecutable("t3")
 
   test "t4":
-    check runTest("t4", true)
+    check runTestOfGeneratedExecutable("t4", true)
   
   test "t5":
-    check runTest("t5", true)
+    check runTestOfGeneratedExecutable("t5", true)
+
+  test "const_reassign":
+    check runTestOfCompilerErrorChecking("const_reassign")
+
+  test "multiple_type_specifiers":
+    check runTestOfCompilerErrorChecking("multiple_type_specifiers")
+  
+  test "undeclared_var":
+    check runTestOfCompilerErrorChecking("undeclared_var")
+
+  test "wrong_num_args":
+    check runTestOfCompilerErrorChecking("wrong_num_args")
+
+  test "return_type_type_error":
+    check runTestOfCompilerErrorChecking("return_type_type_error")
+  
+  test "return_types_are_enforced":
+    check runTestOfCompilerErrorChecking("return_types_are_enforced")

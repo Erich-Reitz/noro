@@ -1,0 +1,7 @@
+pure function max(int n1, int n2) -> int {
+    return n1 + n2;
+}
+
+function main() -> int {
+   bool sum = max(1, 3); 
+}

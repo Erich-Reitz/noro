@@ -78,7 +78,7 @@ type
             boolValue*: bool
         of pkParen:
             exprValue*: Expr
-        token*: Option[Token]
+        token*: Token
 
     CallExpr* = ref object of Expr
         callee*: PrimaryExpr

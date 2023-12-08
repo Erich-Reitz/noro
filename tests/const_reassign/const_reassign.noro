@@ -1,0 +1,5 @@
+function main() -> int {
+    const int one = 1; 
+    one = 2; 
+    return 0; 
+}

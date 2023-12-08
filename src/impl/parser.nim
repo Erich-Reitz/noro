@@ -128,19 +128,19 @@ proc parse_primary_expr(p: var Parser): PrimaryExpr =
     case nxt.typ:
         of tkTrue:
             discard advance(p)
-            return PrimaryExpr(kind: pkBool, boolValue: true)
+            return PrimaryExpr(kind: pkBool, boolValue: true, token: nxt)
         of tkFalse:
             discard advance(p)
-            return PrimaryExpr(kind: pkBool, boolValue: false)
+            return PrimaryExpr(kind: pkBool, boolValue: false, token: nxt)
         of tkInt:
             discard advance(p)
-            return PrimaryExpr(kind: pkInt, intValue: nxt.value.numVal)
+            return PrimaryExpr(kind: pkInt, intValue: nxt.value.numVal, token: nxt)
         of tkString:
             discard advance(p)
-            return PrimaryExpr(kind: pkString, stringValue: nxt.lexeme)
+            return PrimaryExpr(kind: pkString, stringValue: nxt.lexeme, token: nxt)
         of tkIdentifier:
             discard advance(p)
-            return PrimaryExpr(kind: pkIden, strValue: nxt.lexeme)
+            return PrimaryExpr(kind: pkIden, strValue: nxt.lexeme, token: nxt)
         of tkLeftParen:
             discard advance(p)
             let exp = parse_expr(p)

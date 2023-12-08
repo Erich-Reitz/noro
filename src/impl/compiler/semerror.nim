@@ -1,16 +1,24 @@
 import ../types
 
-proc multipleTypeSpecifiers*() =
-    echo "multiple type specifiers"
-    quit QuitFailure
+type NoroTypeError* = object of CatchableError
 
-proc noTypeSpecifiers*() =
-    echo "no type specifiers"
-    quit QuitFailure
+proc multipleTypeSpecifiers*(s: string) =
+    raise newException(NoroTypeError, "multiple type specifiers")
+
+proc noTypeSpecifiers*(s: string ) =
+    raise newException(NoroTypeError, "no type specifiers: ")
+
+
 
 proc undeclared*(s: string) =
     echo "undeclared: " & s
     quit QuitFailure
+
+
+proc constReassign*(s: string) =
+    echo "const reassign: " & s
+    quit QuitFailure
+
 
 proc functionAsValue*() =
     echo "function as value"
@@ -21,8 +29,8 @@ proc valueAsFunction*() =
     quit QuitFailure
 
 proc typeMismatch*(wanted: TypeSpecifer, got: TypeSpecifer) =
-    echo "type mismatch: wanted " & $wanted & ", got " & $got
-    quit QuitFailure
+    raise newException(NoroTypeError, "type mismatch: wanted " & $wanted &
+            ", got " & $got)
 
 proc wrongNumberOfArguments*(fun: string, wanted: int, got: int) =
     echo "wrong number of arguments for " & fun & ": wanted " & $wanted &
