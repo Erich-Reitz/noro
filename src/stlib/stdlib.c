@@ -7,7 +7,9 @@ extern int writestr(char *message) {
 }
 
 extern int writestrnewline(char *message) {
-    return puts(message);
+    int res = puts(message);
+    fflush(stdout); 
+    return res;
 }
 
 extern int writeint(long num) {

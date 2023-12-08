@@ -39,7 +39,7 @@ proc runIntegrationTest(testname: string): (string, int) =
 
 proc runTest(testname: string, expectStdout = false): bool =
   let (output, exitcode) = runIntegrationTest(testname)
-  let (expectedTestOutputStr, expectedRetcodeInt) = expectedTestOutput(testname)
+  let (expectedTestOutputStr, expectedRetcodeInt) = expectedTestOutput(testname, expectStdout)
   
 
   if expectStdout:
@@ -67,7 +67,7 @@ suite "integration tests":
     check runTest("t3")
 
   test "t4":
-    check runTest("t4")
+    check runTest("t4", true)
   
   test "t5":
-    check runTest("t5")
+    check runTest("t5", true)
