@@ -45,7 +45,7 @@ method translateExpression(tb: Tabl, exp: CallExpr): AstNode =
     var argNodes: seq[AstNode] = @[]
     for arg in args:
         argNodes.add(translateExpression(tb, arg))
-    
+
     let callNode = AstCall(fun: funName, args: argNodes)
     return AstNode(kind: akCall, callExpr: callNode)
 

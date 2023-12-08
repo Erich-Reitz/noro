@@ -1,60 +1,11 @@
 import ast
 
-type
-    InstructionKind* = enum
-        ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo,
-            ikConditionalJump, ikReturn, ikCall, ikStringLabelCreate, ikMult
-
-    ValueKind* = enum
-        vkConst, vkTemp, vkStringLit
-
-    Value* = ref object
-        case kind*: ValueKind
-        of vkConst:
-            val*: int
-        of vkTemp:
-            label*: string
-        of vkStringLit:
-            str*: string
-
-
-
-    Instruction* = object
-        kind*: InstructionKind
-        dst*: Value
-        src*: Value
-        src2*: Value
-
-    Frame* = object
-        name*: string
-        instructions*: seq[Instruction]
-
-func constInt*(val: int): Value =
-    return Value(kind: vkConst, val: val)
-
-func toStrLitValue*(s: string): Value =
-    return Value(kind: vkStringLit, str: s)
-
-func fromTempIntToLabelValue*(val: int): Value =
-    let str = "t" & $val
-    return Value(kind: vkTemp, label: str)
-
-func toLabel*(s: string): Value =
-    return Value(kind: vkTemp, label: s)
-
-proc `$`*(v: Value): string =
-    case v.kind
-    of vkConst:
-        return $v.val
-    of vkTemp:
-        return v.label
-    of vkStringLit:
-        return v.str
-    
+import instruction
+import instructutils
 
 var temps = 0
-proc generateInstruction(node: AstBinOp): seq[Instruction]
 
+proc generateInstruction(node: AstBinOp): seq[Instruction]
 proc generateCallInstructionos(node: AstCall): seq[Instruction]
 
 proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
@@ -80,7 +31,8 @@ proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
         let str = side.stringLitExpr.val
         let strLabel = temps.fromTempIntToLabelValue
         inc temps
-        instructions.add(Instruction(kind: ikStringLabelCreate, dst: strLabel, src: str.toStrLitValue))
+        instructions.add(Instruction(kind: ikStringLabelCreate, dst: strLabel,
+                src: str.toStrLitValue))
 
         return strLabel
     else:
@@ -96,7 +48,7 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
     var argCount = 0
     let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
     for arg in node.args:
-        
+
         if argCount > 6:
             echo "Too many arguments, only 6 are supported"
             quit QuitFailure
@@ -107,10 +59,11 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
         # generate an artificial move instruction to move the temp to the assembly register
         callinstructions.add(Instruction(kind: ikMov, dst: reg, src: argTemp))
         argCount += 1
-    
+
 
     # add an instruction to invoke call
-    callinstructions.add(Instruction(kind: ikCall, dst: rhsTempInt, src: funcname))
+    callinstructions.add(Instruction(kind: ikCall, dst: rhsTempInt,
+            src: funcname))
 
     return callinstructions
 
@@ -144,7 +97,7 @@ proc generateInstruction(node: AstBinOp): seq[Instruction] =
     of binOpMinus:
         handleBinOpMinus(leftVal, rightVal)
     of binOpMul:
-        handleBinOpMult(leftVal, rightVal) 
+        handleBinOpMult(leftVal, rightVal)
     else:
         echo "Unsupported operation: ", node.op
         quit QuitFailure
@@ -183,14 +136,15 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
         let callInstructions = generateCallInstructionos(callExpr)
 
         # add the call instructions to the main instructions
-        instructions.add(callinstructions)    
+        instructions.add(callinstructions)
 
         instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
     of akStringLit:
         let str = node.src.stringLitExpr.val
         let strLabel = temps.fromTempIntToLabelValue
         inc temps
-        instructions.add(Instruction(kind: ikStringLabelCreate, dst: strLabel, src: str.toStrLitValue))
+        instructions.add(Instruction(kind: ikStringLabelCreate, dst: strLabel,
+                src: str.toStrLitValue))
         instructions.add(Instruction(kind: ikMov, dst: dest, src: strLabel))
     else:
         echo "Unsupported expression: ", node.src.kind
@@ -296,26 +250,26 @@ proc instructgen*(nodes: seq[AstNode]): seq[Frame] =
 
             # so also when you have a frame, you have params.
             # i placed these in special p0, p1 IR..
-            # so we need "glue instructions" to move these from their assembly registers to 
+            # so we need "glue instructions" to move these from their assembly registers to
             # the stack
             # so we need to generate instructions for these params
             # and add them to the frame instructions
-            let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-
             var paramInstructions = newSeq[Instruction]()
             for p in 0..params-1:
                 let paramDest = Value(kind: vkTemp, label: "p" & $p)
-                let paramSrc = Value(kind: vkTemp, label: registers[p])
-                
-                paramInstructions.add(Instruction(kind: ikMov, dst: paramDest, src: paramSrc))
-            
+                let paramSrc = Value(kind: vkTemp, label: paramRegisters[p])
+
+                paramInstructions.add(Instruction(kind: ikMov, dst: paramDest,
+                        src: paramSrc))
+
             let bodyinstructinos = genfuncbody(node.frameExpr.body.stmts)
 
-            
 
-            frames.add(Frame(name: name, instructions: paramInstructions & bodyinstructinos))
 
-            
+            frames.add(Frame(name: name, instructions: paramInstructions &
+                    bodyinstructinos))
+
+
 
         else: discard
 

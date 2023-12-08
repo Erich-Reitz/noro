@@ -1,47 +1,35 @@
-import instruct
 import std/strutils
-
 import std/tables
+
+import instructutils
+import instruction
 
 type Ctx = ref object
     code*: string
     datasection*: string
- 
+
 type GenTable = ref object
     table*: Table[string, int]
-    counter*: int 
+    counter*: int
     createdStringLabels = Table[string, string]()
 
 
 proc `[]`(t: GenTable, s: string): string =
-    # i deleted reg code?
     if t.createdStringLabels.contains(s):
-        return "FOUND STRING LABEL:" & t.createdStringLabels[s]  
+        return "FOUND STRING LABEL:" & t.createdStringLabels[s]
     if t.table.contains(s):
         return $(t.table[s] * 8)
-    
- 
-    
+
     echo "codegen: ", s, " not found in table"
     quit QuitFailure
-            
+
 
 proc `+=`(c: Ctx, s: string) =
     c.code.add(s)
 
 
-func isRegister(str: string): bool =
-    @["rdi", "rsi", "rdx", "rcx", "r8", "r9", "rax", "rbx", "r10", "r11", "r12", "r13", "r14", "r15"].contains(str)
-
-
 func isInstructionWhichStoresTemp(i: Instruction): bool =
-    case i.kind
-    of ikMov:
-        return i.dst.label != "ret"
-    of ikConditionalJump:
-        return true
-    else:
-        return false
+    result = i.dst.kind == vkTemp and (i.dst.isUserVar or i.dst.isParam or i.dst.isTemp)
 
 
 proc localvars(instructions: seq[Instruction]): int =
@@ -55,7 +43,7 @@ proc localvars(instructions: seq[Instruction]): int =
 
 proc codeGenMoveInstruction(t: GenTable,
         i: Instruction): string =
-    
+
     assert i.kind == ikMov
     let dest = i.dst
 
@@ -84,18 +72,18 @@ proc codeGenMoveInstruction(t: GenTable,
         of vkTemp:
             let srcName = i.src.label
             let srcIndex = t[srcName]
-            
+
             if srcIndex.startsWith("FOUND STRING LABEL:"):
                 return "    mov " & dest.label & ", " & srcIndex.split(":")[1]
             else:
-                return "    mov " & dest.label & ", [rbp - " & srcIndex & "]"   
+                return "    mov " & dest.label & ", [rbp - " & srcIndex & "]"
         of vkConst:
             return "    mov " & dest.label & ", " & $(i.src.val)
         of vkStringLit:
             echo "codegen: string literals not supported yet"
             quit QuitFailure
     else:
-        if i.src.kind == vkTemp and      i.src.label.isRegister:
+        if i.src.kind == vkTemp and i.src.label.isRegister:
             if t.table.contains(dest.label) == false:
                 t.table[dest.label] = t.counter
 
@@ -117,9 +105,10 @@ proc codeGenMoveInstruction(t: GenTable,
                     let srcIndex = t[srcName]
                     var retStr = "    mov rax, [rbp - " & srcIndex & "]\n"
                     if srcIndex.startsWith("FOUND STRING LABEL:"):
-                        retStr = "    mov " & "rax" & ", " & srcIndex.split(":")[1] & "\n"
+                        retStr = "    mov " & "rax" & ", " & srcIndex.split(
+                                ":")[1] & "\n"
 
-                    retStr = retStr &    "    mov [rbp - " & $t[dest.label] & "], rax"
+                    retStr = retStr & "    mov [rbp - " & $t[dest.label] & "], rax"
                     return retStr
                 of vkConst:
                     let destName = dest.label
@@ -205,8 +194,10 @@ proc codegenConditionalJump(t: GenTable,
     let src2 = i.src2
 
     assert dest.kind == vkTemp
-
     let destName = dest.label
+    if t.table.contains(destName) == false:
+        t.table[destName] = t.counter
+        t.counter += 1
     let destIndex = t[destName]
 
     # src1 is a temp. label
@@ -239,13 +230,13 @@ proc codegenAdd(t: GenTable, i: Instruction): string =
     let dest = i.dst
     assert dest.kind == vkTemp
 
-    
+
     let destName = dest.label
-    
+
     if t.table.contains(destName) == false:
         t.table[destName] = t.counter
         t.counter += 1
-    
+
     let destIndex = t[destName]
 
     let lhs = i.src
@@ -296,13 +287,13 @@ proc codegenMinus(t: GenTable, i: Instruction): string =
     let dest = i.dst
     assert dest.kind == vkTemp
 
-    
+
     let destName = dest.label
-    
+
     if t.table.contains(destName) == false:
         t.table[destName] = t.counter
         t.counter += 1
-    
+
     let destIndex = t[destName]
 
     let lhs = i.src
@@ -356,13 +347,13 @@ proc codegenMult(t: GenTable, i: Instruction): string =
     let dest = i.dst
     assert dest.kind == vkTemp
 
-    
+
     let destName = dest.label
-    
+
     if t.table.contains(destName) == false:
         t.table[destName] = t.counter
         t.counter += 1
-    
+
     let destIndex = t[destName]
 
     let lhs = i.src
@@ -434,7 +425,7 @@ proc codegen(t: GenTable, i: Instruction): string =
         if t.table.contains(destName) == false:
             t.table[destName] = t.counter
             t.counter += 1
-        
+
         let destIndex = t[destName]
         return "    call " & i.src.label & "\n" &
                "    mov [rbp - " & destIndex & "], rax"
@@ -447,7 +438,7 @@ proc codegen(t: GenTable, i: Instruction): string =
     return ""
 
 
-# message:  db        "Hello, World", 10      ; no
+
 
 proc codegen(c: Ctx, n: Frame) =
     let name = n.name
@@ -487,16 +478,9 @@ proc codegen(c: Ctx, n: Frame) =
     c += $localVarsBytesAligned
     c += "\n"
 
-    
-
-
-
-
     for i in n.instructions:
         c += codegen(tb, i)
         c += "\n"
-
-
 
     # end label
     c += ".end:\n"
@@ -536,7 +520,7 @@ proc codegenFrames*(frames: seq[Frame]): string =
     ctx += "    mov rdi, rax\n"
     ctx += "    mov rax, 60\n"
     ctx += "    syscall\n"
-    
+
     ctx += "section .data\n"
     ctx += ctx.datasection
     ctx += "\n"

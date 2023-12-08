@@ -5,10 +5,10 @@ import impl/parser
 import impl/status
 import impl/compiler/sempass
 import impl/compiler/translate
-import impl/compiler/ast
 import impl/compiler/codegen
-import impl/compiler/instruct
+import impl/compiler/instructgen
 import impl/compiler/optimizer
+import impl/compiler/instruction
 
 
 proc run(program: string): void =
@@ -28,7 +28,7 @@ proc run(program: string): void =
         for i in f.instructions:
             lenInstructions += 1
             echo i
-    
+
     echo "number: " & $lenInstructions
 
     let optimized = optpass(instructions)
@@ -44,12 +44,9 @@ proc run(program: string): void =
 
     echo "number: " & $lenInstructions
     let asmCode = codegenFrames(optimized)
-    
-    
+
+
     writeFile("asm/out.asm", asmCode)
-
-
-
 
 
 proc runfile(filename: string): int =
@@ -60,24 +57,11 @@ proc runfile(filename: string): int =
             return 65
         if hadRuntimeError:
             return 70
-
         return 0
-
 
     except IOError as e:
         echo e.msg
         return QuitFailure
-
-proc runPrompt(): int =
-    while true:
-        stdout.write "> "
-        let line = readLine(stdin)
-        if len(line) == 0:
-            break
-
-        run(line)
-        status.hadError = false
-    return QuitSuccess
 
 proc main() =
     let paramCount = os.paramCount()
@@ -88,10 +72,6 @@ proc main() =
         let filename = os.paramStr(1)
         let result = runfile(filename)
         quit(result)
-    else:
-        let result = runPrompt()
-        quit(result)
-
 
 
 when isMainModule:
