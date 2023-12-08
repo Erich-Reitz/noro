@@ -47,6 +47,7 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
     var callinstructions = newSeq[Instruction]()
     var argCount = 0
     let registers = @["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+    var tempResultTempLablels = newSeq[Value]()
     for arg in node.args:
 
         if argCount > 6:
@@ -54,11 +55,16 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
             quit QuitFailure
 
         let argTemp = processSide(arg, callinstructions)
+        tempResultTempLablels.add(argTemp)
 
-        let reg = registers[argCount].toLabel
-        # generate an artificial move instruction to move the temp to the assembly register
-        callinstructions.add(Instruction(kind: ikMov, dst: reg, src: argTemp))
+
         argCount += 1
+
+    # Need to this AFTER so they aren't overwritten
+    for i in 0..<argCount:
+        let reg = registers[i].toLabel
+        # generate an artificial move instruction to move the temp to the assembly register
+        callinstructions.add(Instruction(kind: ikMov, dst: reg, src: tempResultTempLablels[i]))
 
 
     # add an instruction to invoke call
@@ -137,8 +143,9 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
 
         # add the call instructions to the main instructions
         instructions.add(callinstructions)
-
-        instructions.add(Instruction(kind: ikMov, dst: dest, src: rhsTempInt))
+        let moveAfterCallI = Instruction(kind: ikMov, dst: dest, src: rhsTempInt)
+        echo "moveAfterCallI: ", moveAfterCallI
+        instructions.add(moveAfterCallI)
     of akStringLit:
         let str = node.src.stringLitExpr.val
         let strLabel = temps.fromTempIntToLabelValue
@@ -171,10 +178,17 @@ proc genCJumpInstructions(a: AstCJump): seq[Instruction] =
 
     let compareDest = temps.fromTempIntToLabelValue
     inc temps
-    assert a.op == relOpEq
+
     # TODO: where change
-    instructions.add(Instruction(kind: ikIntEqual, dst: compareDest,
-            src: leftDest, src2: rightDest))
+    if a.op == relOpEq:
+        instructions.add(Instruction(kind: ikIntEqual, dst: compareDest,
+                src: leftDest, src2: rightDest))
+    elif a.op == relOpGt:
+        instructions.add(Instruction(kind: ikIntGt, dst: compareDest,
+                src: leftDest, src2: rightDest))
+    else:
+        echo "Unsupported operation: ", a.op
+        assert false
 
     # now the conditional jumps
     let trueLabel = a.trueLabel.label.toLabel

@@ -160,11 +160,25 @@ method relationalOperatorFromExpr(exp: EqualityExpr): RelOp =
     of eqOpNeq:
         return relOpNe
 
+method relationalOperatorFromExpr(exp: RelationalExpr): RelOp =
+    case exp.op:
+    of relOpGt:
+        return relOpGt
+    else:
+        assert false
+
 
 method decomposeCondition(tb: Tabl, exp: Expr): (AstNode, AstNode,
         RelOp) {.base.} =
     echo "failed to decompose condition"
     quit QuitFailure
+
+
+method decomposeCondition(tb: Tabl, exp: RelationalExpr): (AstNode, AstNode, RelOp) =
+    let lhs = translateExpression(tb, exp.lhs)
+    let rhs = translateExpression(tb, exp.rhs)
+    let op = relationalOperatorFromExpr(exp)
+    return (lhs, rhs, op)
 
 method decomposeCondition(tb: Tabl, exp: EqualityExpr): (AstNode, AstNode, RelOp) =
     let lhs = translateExpression(tb, exp.lhs)
@@ -172,11 +186,6 @@ method decomposeCondition(tb: Tabl, exp: EqualityExpr): (AstNode, AstNode, RelOp
     let op = relationalOperatorFromExpr(exp)
     return (lhs, rhs, op)
 
-    # AstCJump* = object
-    #     op*: RelOp
-    #     left*: AstNode
-    #     right*: AstNode
-    #     falseLabel*: string
 
 proc translateIfStmt(tb: Tabl, ifstmt: IfStmt): AstNode =
     let (lhs, rhs, op) = decomposeCondition(tb, ifstmt.cond)

@@ -1,7 +1,7 @@
 type
     InstructionKind* = enum
         ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo,
-            ikConditionalJump, ikReturn, ikCall, ikStringLabelCreate, ikMult
+            ikConditionalJump, ikReturn, ikCall, ikStringLabelCreate, ikMult, ikIntGt
 
     ValueKind* = enum
         vkConst, vkTemp, vkStringLit

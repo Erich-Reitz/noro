@@ -122,9 +122,10 @@ proc codeGenMoveInstruction(t: GenTable,
             else:
                 return "    "
 
-proc codeGenIntEqual(t: GenTable, i: Instruction): string =
-    assert i.kind == ikIntEqual
 
+
+
+proc codegenIntCompare(t: GenTable, i: Instruction, instructionAfterCmp: string): string =
     let dest = i.dst
     t.table[dest.label] = t.counter
     t.counter += 1
@@ -147,7 +148,7 @@ proc codeGenIntEqual(t: GenTable, i: Instruction): string =
             # move rhs to rax
             return "    mov rax, [rbp - " & rhsIndex & "]\n" &
                    "    cmp [rbp - " & lhsIndex & "], rax\n" &
-                   "    sete byte [rbp - " & destIndex & "]"
+                   "    " & instructionAfterCmp & " byte [rbp - " & destIndex & "]"
         of vkConst:
             let destName = dest.label
             let lhsName = lhsCompare.label
@@ -155,7 +156,7 @@ proc codeGenIntEqual(t: GenTable, i: Instruction): string =
             let lhsIndex = t[lhsName]
             return "    cmp qword [rbp - " & lhsIndex & "], " & $(
                     rhsCompare.val) & "\n" &
-                   "    sete byte [rbp - " & destIndex & "]"
+                   "    " & instructionAfterCmp & " byte [rbp - " & destIndex & "]"
         of vkStringLit:
             echo "codegen: string literals not supported yet"
             quit QuitFailure
@@ -168,13 +169,13 @@ proc codeGenIntEqual(t: GenTable, i: Instruction): string =
             let rhsIndex = t[rhsName]
             return "    cmp qword [rbp - " & rhsIndex & "], " & $(
                     lhsCompare.val) & "\n" &
-                   "    sete byte [rbp - " & destIndex & "]"
+                   "    " & instructionAfterCmp & " byte [rbp - " & destIndex & "]"
         of vkConst:
             let destName = dest.label
             let destIndex = t[destName]
             return "    cmp qword " & $(lhsCompare.val) & ", " & $(
                     rhsCompare.val) & "\n" &
-                   "    sete byte [rbp - " & destIndex & "]"
+                   "    " & instructionAfterCmp & " byte [rbp - " & destIndex & "]"
         of vkStringLit:
             echo "codegen: string literals not supported yet"
             quit QuitFailure
@@ -278,7 +279,7 @@ proc codegen(t: GenTable, i: Instruction): string =
     of ikMov:
         return codeGenMoveInstruction(t, i)
     of ikIntEqual:
-        return codegenIntEqual(t, i)
+        return codegenIntCompare(t, i, "sete")
     of ikConditionalJump:
         return codegenConditionalJump(t, i)
     of ikLabelCreate:
@@ -300,6 +301,8 @@ proc codegen(t: GenTable, i: Instruction): string =
                "    mov [rbp - " & destIndex & "], rax"
     of ikStringLabelCreate:
         discard
+    of ikIntGt:
+        return codegenIntCompare(t, i, "setg")
     else:
         echo "codegen: unhandled instruction kind: ", i.kind
         quit QuitFailure

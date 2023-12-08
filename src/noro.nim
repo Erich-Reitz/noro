@@ -8,7 +8,7 @@ import impl/compiler/translate
 import impl/compiler/codegen
 import impl/compiler/instructgen
 import impl/compiler/optimizer
-
+import impl/compiler/instruction
 
 proc run(program: string): void =
     let tokens = lex(program)
@@ -18,8 +18,6 @@ proc run(program: string): void =
     let instructions = instructgen(code)
     let optimized = optpass(instructions)
     let asmCode = codegenFrames(optimized)
-
-
     writeFile("asm/out.asm", asmCode)
 
 
