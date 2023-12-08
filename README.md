@@ -2,7 +2,7 @@
 
 CS 403 final project.
 
-My aim for this project was to write a statically typed language that compiled to assembly. 
+My aim for this project was to write a statically typed language that compiles to assembly. 
 
 ## TLDR
 
@@ -259,7 +259,7 @@ project requires `Nimble` which is bundled with Nim installation. To the build t
 - test: `nimble test`
 
 
-### Using Compilier
+### Usage
 - run by: `./noro <file>`
     - will generate linux x86 assembly at `./asm/out.asm`
         - may need to create asm folder
