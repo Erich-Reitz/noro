@@ -14,12 +14,13 @@ type GenTable = ref object
 
 
 proc `[]`(t: GenTable, s: string): string =
+    # i deleted reg code?
+    if t.createdStringLabels.contains(s):
+        return "FOUND STRING LABEL:" & t.createdStringLabels[s]  
     if t.table.contains(s):
         return $(t.table[s] * 8)
     
-    # i deleted reg code?
-    if t.createdStringLabels.contains(s):
-        return "FOUND STRING LABEL:" & t.createdStringLabels[s]   
+ 
     
     echo "codegen: ", s, " not found in table"
     quit QuitFailure
@@ -63,7 +64,13 @@ proc codeGenMoveInstruction(t: GenTable,
         of vkTemp:
             let srcName = i.src.label
             let srcIndex = t[srcName]
-            return "    mov rax, [rbp - " & srcIndex & "]\n" &
+
+            if srcIndex.startsWith("FOUND STRING LABEL:"):
+                return "    mov rax, " & srcIndex.split(":")[1] & "\n" &
+                       "    jmp .end"
+            else:
+
+                return "    mov rax, [rbp - " & srcIndex & "]\n" &
                    "    jmp .end"
         of vkConst:
             return "    mov rax, " & $(i.src.val) & "\n" &
@@ -77,7 +84,7 @@ proc codeGenMoveInstruction(t: GenTable,
         of vkTemp:
             let srcName = i.src.label
             let srcIndex = t[srcName]
-
+            
             if srcIndex.startsWith("FOUND STRING LABEL:"):
                 return "    mov " & dest.label & ", " & srcIndex.split(":")[1]
             else:
@@ -283,6 +290,124 @@ proc codegenAdd(t: GenTable, i: Instruction): string =
             echo "codegen: string literals not supported yet"
             quit QuitFailure
 
+proc codegenMinus(t: GenTable, i: Instruction): string =
+    assert i.kind == ikMinus
+
+    let dest = i.dst
+    assert dest.kind == vkTemp
+
+    
+    let destName = dest.label
+    
+    if t.table.contains(destName) == false:
+        t.table[destName] = t.counter
+        t.counter += 1
+    
+    let destIndex = t[destName]
+
+    let lhs = i.src
+    let rhs = i.src2
+
+    case lhs.kind
+    of vkTemp:
+        case rhs.kind
+        of vkTemp:
+            let lhsName = lhs.label
+            let rhsName = rhs.label
+            let lhsIndex = t[lhsName]
+            let rhsIndex = t[rhsName]
+            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
+                   "    sub rax, [rbp - " & rhsIndex & "]\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkConst:
+            let lhsName = lhs.label
+            let lhsIndex = t[lhsName]
+            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
+                   "    sub rax, " & $(rhs.val) & "\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkStringLit:
+            echo "codegen: string literals not supported yet"
+            quit QuitFailure
+    of vkStringLit:
+        echo "codegen: string literals not supported yet"
+        quit QuitFailure
+    of vkConst:
+        case rhs.kind
+        of vkTemp:
+            let rhsName = rhs.label
+            let rhsIndex = t[rhsName]
+            return "    mov rax, " & $(lhs.val) & "\n" &
+                   "    sub rax, [rbp - " & rhsIndex & "]\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkConst:
+            return "    mov rax, " & $(lhs.val) & "\n" &
+                   "    sub rax, " & $(rhs.val) & "\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkStringLit:
+            echo "codegen: string literals not supported yet"
+            quit QuitFailure
+
+
+
+
+proc codegenMult(t: GenTable, i: Instruction): string =
+    assert i.kind == ikMult
+
+    let dest = i.dst
+    assert dest.kind == vkTemp
+
+    
+    let destName = dest.label
+    
+    if t.table.contains(destName) == false:
+        t.table[destName] = t.counter
+        t.counter += 1
+    
+    let destIndex = t[destName]
+
+    let lhs = i.src
+    let rhs = i.src2
+
+    case lhs.kind
+    of vkTemp:
+        case rhs.kind
+        of vkTemp:
+            let lhsName = lhs.label
+            let rhsName = rhs.label
+            let lhsIndex = t[lhsName]
+            let rhsIndex = t[rhsName]
+            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
+                   "    imul rax, [rbp - " & rhsIndex & "]\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkConst:
+            let lhsName = lhs.label
+            let lhsIndex = t[lhsName]
+            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
+                   "    imul rax, " & $(rhs.val) & "\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkStringLit:
+            echo "codegen: string literals not supported yet"
+            quit QuitFailure
+    of vkStringLit:
+        echo "codegen: string literals not supported yet"
+        quit QuitFailure
+    of vkConst:
+        case rhs.kind
+        of vkTemp:
+            let rhsName = rhs.label
+            let rhsIndex = t[rhsName]
+            return "    mov rax, " & $(lhs.val) & "\n" &
+                   "    imul rax, [rbp - " & rhsIndex & "]\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkConst:
+            return "    mov rax, " & $(lhs.val) & "\n" &
+                   "    imul rax, " & $(rhs.val) & "\n" &
+                   "    mov [rbp - " & destIndex & "], rax"
+        of vkStringLit:
+            echo "codegen: string literals not supported yet"
+            quit QuitFailure
+
+
 
 proc codegen(t: GenTable, i: Instruction): string =
     case i.kind
@@ -298,6 +423,10 @@ proc codegen(t: GenTable, i: Instruction): string =
         return "    jmp ." & i.dst.label
     of ikAdd:
         return codegenAdd(t, i)
+    of ikMinus:
+        return codegenMinus(t, i)
+    of ikMult:
+        return codegenMult(t, i)
     of ikCall:
         let dest = i.dst
         assert dest.kind == vkTemp
@@ -341,7 +470,6 @@ proc codegen(c: Ctx, n: Frame) =
             tb.createdStringLabels[label] = asmLabel
 
     c.dataSection.add(stringLabelGenCode)
-    echo c.datasection
 
     c += name
     c += ":\n"
@@ -352,9 +480,11 @@ proc codegen(c: Ctx, n: Frame) =
     c += "    sub rsp, "
     # subtract by the number of local variables
     let localVarsBytes = localvars * 8
-    let localVarBytesAligned = localVarsBytes + (16 - (localVarsBytes mod 16))
+    var localVarsBytesAligned = 0
+    if localVarsBytes != 0:
+        localVarsBytesAligned = localVarsBytes + (16 - (localVarsBytes mod 16))
 
-    c += $localVarBytesAligned
+    c += $localVarsBytesAligned
     c += "\n"
 
     
@@ -390,9 +520,14 @@ proc codegenFrames*(frames: seq[Frame]): string =
         if f.name == "writestrnewline":
             ctx += "extern writestrnewline\n"
             continue
+        if f.name == "writeint":
+            ctx += "extern writeint\n"
+            continue
 
-        for i in f.instructions:
-            echo i
+        if f.name == "writestr":
+            ctx += "extern writestr\n"
+            continue
+
         codegen(ctx, f)
 
 

@@ -69,6 +69,18 @@ method translateExpression(tb: Tabl, exp: AdditiveExpr): AstNode =
                 op: binOpMinus))
 
 
+method translateExpression(tb: Tabl, exp: MultiplicativeExpr): AstNode =
+    let lhs = translateExpression(tb, exp.lhs)
+    let rhs = translateExpression(tb, exp.rhs)
+
+    if exp.op == multOpMul:
+        return AstNode(kind: akBinOp, binOpExpr: AstBinOp(left: lhs, right: rhs,
+                op: binOpMul))
+    else:
+        return AstNode(kind: akBinOp, binOpExpr: AstBinOp(left: lhs, right: rhs,
+                op: binOpDiv))
+
+
 method translateExpression(tb: Tabl, exp: PrimaryExpr): AstNode =
     case exp.kind:
         of pkIden:
@@ -168,7 +180,6 @@ method decomposeCondition(tb: Tabl, exp: EqualityExpr): (AstNode, AstNode, RelOp
 
 proc translateIfStmt(tb: Tabl, ifstmt: IfStmt): AstNode =
     let (lhs, rhs, op) = decomposeCondition(tb, ifstmt.cond)
-
 
     let trueLabel = "l" & $dispenseLabel(tb)
 

@@ -16,15 +16,33 @@ proc run(program: string): void =
     let lexpr = parse(tokens)
     semAnalysis(lexpr)
     let code = translate(lexpr)
+    # for n in code:
+    #     debugPrint(n)
+
 
     let instructions = instructgen(code)
-    let optimized = optpass(instructions)
+    echo "------------------------"
+    var lenInstructions = 0
+    for f in instructions:
+        echo f.name
+        for i in f.instructions:
+            lenInstructions += 1
+            echo i
     
-    # for f in optimized:
-    #     echo f.name
-    #     for i in f.instructions:
-    #         echo i
+    echo "number: " & $lenInstructions
 
+    let optimized = optpass(instructions)
+
+
+    echo "------------------------"
+    lenInstructions = 0
+    for f in optimized:
+        echo f.name
+        for i in f.instructions:
+            lenInstructions += 1
+            echo i
+
+    echo "number: " & $lenInstructions
     let asmCode = codegenFrames(optimized)
     
     

@@ -3,7 +3,7 @@ import ast
 type
     InstructionKind* = enum
         ikMov, ikAdd, ikMinus, ikIntEqual, ikLabelCreate, ikLabelJumpTo,
-            ikConditionalJump, ikReturn, ikCall, ikStringLabelCreate
+            ikConditionalJump, ikReturn, ikCall, ikStringLabelCreate, ikMult
 
     ValueKind* = enum
         vkConst, vkTemp, vkStringLit
@@ -71,10 +71,11 @@ proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
     of akLabel:
         return side.labelExpr.label.toLabel
     of akCall:
+        let newDest = temps.fromTempIntToLabelValue
         let callExpr = side.callExpr
         let callInstructions = generateCallInstructionos(callExpr)
         instructions.add(callinstructions)
-        return temps.fromTempIntToLabelValue
+        return newDest
     of akStringLit:
         let str = side.stringLitExpr.val
         let strLabel = temps.fromTempIntToLabelValue
@@ -89,6 +90,7 @@ proc processSide(side: AstNode, instructions: var seq[Instruction]): Value =
 
 proc generateCallInstructionos(node: AstCall): seq[Instruction] =
     let rhsTempInt = temps.fromTempIntToLabelValue
+    inc temps
     let funcname = node.fun.toLabel
     var callinstructions = newSeq[Instruction]()
     var argCount = 0
@@ -99,10 +101,7 @@ proc generateCallInstructionos(node: AstCall): seq[Instruction] =
             echo "Too many arguments, only 6 are supported"
             quit QuitFailure
 
-        # generate code for evaluating the argument
-        echo "Generating code for argument: ", argCount, " of function: ", funcname
         let argTemp = processSide(arg, callinstructions)
-        echo "Generated code for argument: ", argCount, " of function: ", funcname, " with temp: ", argTemp
 
         let reg = registers[argCount].toLabel
         # generate an artificial move instruction to move the temp to the assembly register
@@ -131,6 +130,9 @@ proc generateInstruction(node: AstBinOp): seq[Instruction] =
         instructions.add(Instruction(kind: ikMinus, dst: dest, src: leftVal,
                 src2: rightVal))
 
+    proc handleBinOpMult(leftVal, rightVal: Value) =
+        instructions.add(Instruction(kind: ikMult, dst: dest, src: leftVal,
+                src2: rightVal))
 
 
     let leftVal = processSide(node.left, instructions)
@@ -141,6 +143,8 @@ proc generateInstruction(node: AstBinOp): seq[Instruction] =
         handleBinOpPlus(leftVal, rightVal)
     of binOpMinus:
         handleBinOpMinus(leftVal, rightVal)
+    of binOpMul:
+        handleBinOpMult(leftVal, rightVal) 
     else:
         echo "Unsupported operation: ", node.op
         quit QuitFailure
@@ -213,6 +217,7 @@ proc genCJumpInstructions(a: AstCJump): seq[Instruction] =
 
     let compareDest = temps.fromTempIntToLabelValue
     inc temps
+    # TODO: where change
     instructions.add(Instruction(kind: ikIntEqual, dst: compareDest,
             src: leftDest, src2: rightDest))
 

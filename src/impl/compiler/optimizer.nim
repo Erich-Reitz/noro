@@ -45,7 +45,6 @@ proc reduceConstantOperations(instructions: seq[Instruction]): seq[Instruction] 
 
 
 proc sourceOfSourceIsConst(instructions: seq[Instruction]): seq[Instruction] =
-    echo instructions
     var constTable = initTable[string, int]() # Table to map variable names to constant values
     result = @[]
     for i in 0 ..< instructions.len:
@@ -103,6 +102,9 @@ proc removeUnusedTemps(instructions: seq[Instruction]): seq[Instruction] =
             discard
 
         if dst.label.startsWith("r"):
+            continue
+
+        if dst.label.startsWith("p"):
             continue
 
 
@@ -179,6 +181,10 @@ proc resultOfCallMoved(instructions: seq[Instruction]): seq[Instruction] =
         if i.kind == ikCall:
             let dst = i.dst
             assert dst.kind == vkTemp
+            if dst.label.startsWith("v"):
+                result.add(i)
+                continue
+
             let str = dst.label
             if callResultToNextMove.contains(str) == true:
                 let newDest = callResultToNextMove[str]
@@ -212,6 +218,8 @@ proc optimizeInstructions(instructions: seq[Instruction]): seq[Instruction] =
         newInstructions = sourceOfSourceIsConst(newInstructions)
     newInstructions = removeUnusedTemps(newInstructions)
     newInstructions = resultOfCallMoved(newInstructions)
+
+
     return newInstructions
 
 

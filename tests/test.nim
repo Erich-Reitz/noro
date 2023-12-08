@@ -5,40 +5,47 @@ import std/strutils
 func testFileLocation(testname: string): string =
   "tests/" & testname & "/" & testname & ".noro"
 
+func testReturnCodeLocation(testname: string): string =
+  "tests/" & testname & "/" & testname & ".ret"
+
 func testOutputLocation(testname: string): string =
   "tests/" & testname & "/" & testname & ".out"
 
-proc expectedTestOutput(testname: string): int =
-  readFile(testOutputLocation(testname)).parseInt
+proc expectedTestOutput(testname: string, testStdout= false): (string, int) =
+  let expectedRetCode = readFile(testReturnCodeLocation(testname)).parseInt
+  if testStdout:
+    let expectedStdout = readFile(testOutputLocation(testname))
+    return (expectedStdout, expectedRetCode)
+  
+  return ("", expectedRetCode)
 
-proc runIntegrationTestForRetCode(testname: string): (string, int) =
+proc runIntegrationTest(testname: string): (string, int) =
   # generate asm file
   var (output, retcode) = osproc.execCmdEx("./noro " & testFileLocation(testname))
   
   assert retcode == 0, "failed to run noro"
 
-  # assemble asm file
-  (output, retcode) = osproc.execCmdEx("nasm -f elf64 asm/out.asm")
+  # run assembly script
+  (output, retcode) = osproc.execCmdEx("./runasm.sh")
+  
+  assert retcode == 0, "failed to run assembly script"
 
-  assert retcode == 0, "nasm failed"
-
-  # link asm file
-  (output, retcode) = osproc.execCmdEx("ld -o asm/out asm/out.o")
-
-  assert retcode == 0, "ld failed"
-
-  # run executable
+  # run compiled program
   (output, retcode) = osproc.execCmdEx("./asm/out")
-
-
+  
   return (output, retcode)
 
 
 
-proc runTest(testname: string): bool =
-  let (_, exitcode) = runIntegrationTestForRetCode(testname)
-  let expectedRetcode = expectedTestOutput(testname)
-  result = expectedRetcode == exitcode
+proc runTest(testname: string, expectStdout = false): bool =
+  let (output, exitcode) = runIntegrationTest(testname)
+  let (expectedTestOutputStr, expectedRetcodeInt) = expectedTestOutput(testname)
+  
+
+  if expectStdout:
+    return exitcode == expectedRetcodeInt and expectedTestOutputStr == output
+  else:
+    return exitcode == expectedRetcodeInt
 
 suite "integration tests":
   # compile main program once before executing tests
@@ -58,4 +65,7 @@ suite "integration tests":
   
   test "t3":
     check runTest("t3")
+
+  test "t4":
+    check runTest("t4")
   
