@@ -84,8 +84,8 @@ suite "integration tests":
   test "t3":
     check runTestOfGeneratedExecutable("t3")
 
-  test "t4":
-    check runTestOfGeneratedExecutable("t4", true)
+  test "fibonacci":
+    check runTestOfGeneratedExecutable("fibonacci", true)
   
   test "t5":
     check runTestOfGeneratedExecutable("t5", true)
@@ -107,3 +107,6 @@ suite "integration tests":
   
   test "return_types_are_enforced":
     check runTestOfCompilerErrorChecking("return_types_are_enforced")
+
+  test "six_param_max":
+    check runTestOfGeneratedExecutable("six_param_max")

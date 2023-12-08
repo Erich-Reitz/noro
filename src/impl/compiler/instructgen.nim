@@ -144,7 +144,6 @@ proc generateInstruction(node: AstMove): seq[Instruction] =
         # add the call instructions to the main instructions
         instructions.add(callinstructions)
         let moveAfterCallI = Instruction(kind: ikMov, dst: dest, src: rhsTempInt)
-        echo "moveAfterCallI: ", moveAfterCallI
         instructions.add(moveAfterCallI)
     of akStringLit:
         let str = node.src.stringLitExpr.val

@@ -1,0 +1,15 @@
+pure function max(int n1, int n2) -> int {
+    if (n1 > n2) {
+        return n1;
+    } else {
+        return n2;
+    }
+
+}
+
+pure function max6(int n1, int n2, int n3, int n4, int n5, int n6) -> int {
+    return max(max(max(n1, n2), max(n3, n4)), max(n5, n6));
+}
+function main() -> int {
+    return max6(101, 2, 3, 100, 5, 6);
+}
