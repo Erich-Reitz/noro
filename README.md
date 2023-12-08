@@ -4,7 +4,22 @@ CS 403 final project.
 
 My aim for this project was to write a statically typed language that compiled to assembly. 
 
-At the moment, the language implements a minimal set of features you would expect from such a language.
+## TLDR
+
+I wrote a compiler for a very small language. It supports
+
+- decently complete typechecking and semantic analysis
+- variable assignment. integers work completely, strings work as char* to string literals located in the data section
+- addition, subtraction, multiplication over ints
+- If statements with else blocks
+- ==, and > over integers
+- calling C functions to print integers and strings.
+- functions, and early returns
+- no: anything else (user defined types, arrays, operations on strings..). 
+
+
+## Rest
+
 #### Implemented
 The semantic analysis phase includes
 - Typechecking over builtin types and their operations (+, -, logical and/or, less than, assignment, etc.)
@@ -30,7 +45,7 @@ To generate assembly, I first recreate the parse tree in a lower form of an AST.
         translate: transforms parse tree to Ast
     ```
 
-Then, I tranform the Ast into a list of frames, each containing a list of instructions. For the following program, that looks has follows.
+Then, I tranform the Ast into a list of frames, each containing a list of instructions. For the following program, that looks as follows.
 
 - 
     ```

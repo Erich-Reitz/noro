@@ -36,8 +36,6 @@ type
         of lkNum: numVal*: int
 
 
-import options
-
 type
     PrimaryExprKind* = enum
         pkIden, pkInt, pkString, pkBool, pkParen
