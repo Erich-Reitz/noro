@@ -8,7 +8,6 @@ import impl/compiler/translate
 import impl/compiler/codegen
 import impl/compiler/instructgen
 import impl/compiler/optimizer
-import impl/compiler/instruction
 
 proc run(program: string): void =
     let tokens = lex(program)

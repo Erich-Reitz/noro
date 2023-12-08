@@ -9,7 +9,6 @@ proc noTypeSpecifiers*(s: string ) =
     raise newException(NoroTypeError, "no type specifiers: ")
 
 
-
 proc undeclared*(s: string) =
     echo "undeclared: " & s
     quit QuitFailure
