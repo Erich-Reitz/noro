@@ -112,7 +112,7 @@ Note that this is unfortunately not SSA form. The file located at `src/impl/comp
 - `sourceOfSourceIsConst`: If move instruction (mov y x) exists and x was (mov x const), replace it with (mov y const). Only for temporaries
 - `removeUnusedTemps`: Remove (for a subset of instruction kinds) instructions that list a temporary as their destination when the temporary is never used 
 
-Finally, `src/impl/compiler/codegen` and `src/impl/compiler/asmgen` construct NASM x86 assembly for the instructions listed. The program is linked with C files so I can print strings and integers. This helps test control flow as well.
+Finally, `src/impl/compiler/codegen` and `src/impl/compiler/asmgen` construct Intel x86 assembly for the instructions listed. The program is linked with C files so I can print strings and integers. This helps test control flow as well.
 
 ## Example Programs
 
@@ -258,7 +258,17 @@ project requires `Nimble` which is bundled with Nim installation. To the build t
 - build: `nimble build`
 - test: `nimble test`
 
+
+### Using Compilier
+- run by: `./noro <file>`
+    - will generate linux x86 assembly at `./asm/out.asm`
+        - may need to create asm folder
+    - the `runasm.sh` script will compile and link with some C functions.
+
+
 ### Testing
 The program used for testing can be viewed at `tests/test.nim`. The program will automatically execute each test case, invoking the lox program with a specific test file located at `tests/<testname>/<testname>.lox`. The expected output is 
 in the same folder, at `tests/<testname>/<testname>.out`.
+
+
 

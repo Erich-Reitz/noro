@@ -32,7 +32,7 @@ proc runIntegrationTest(testname: string): (string, int) =
   assert retcode == 0, "failed to run noro"
 
   # run assembly script
-  (output, retcode) = osproc.execCmdEx("./runasm.sh")
+  (output, retcode) = osproc.execCmdEx("./runnasm.sh")
   
   assert retcode == 0, "failed to run assembly script"
 
