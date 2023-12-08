@@ -23,7 +23,7 @@ proc initScanner*(source: string): Scanner =
       ("if", tkIf), ("or", tkOr),
       ("return", tkReturn),
        ("true", tkTrue), ("int", tkIntDecl), ("string", tkStringDecl),
-      ("while", tkWhile), ("const", tkConst), ("pure", tkPure), ("bool", tkBoolDecl)
+      ("while", tkWhile), ("const", tkConst), ("pure", tkPure), ("bool", tkBoolDecl), ("forbid", tkForbid)
     ]
 
     for (keyword, token) in keywordTokens:

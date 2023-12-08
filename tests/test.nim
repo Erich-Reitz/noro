@@ -61,7 +61,6 @@ proc runTestOfCompilerErrorChecking(testname: string): bool =
   # want a non-zero exit code bc error
   if exitcode == 0:
     return false
-
   return output == expectedErrorMsg
   
 
@@ -110,3 +109,6 @@ suite "integration tests":
 
   test "six_param_max":
     check runTestOfGeneratedExecutable("six_param_max")
+
+  test "forbidden":
+    check runTestOfCompilerErrorChecking("forbidden")

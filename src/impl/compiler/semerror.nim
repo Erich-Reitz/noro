@@ -9,6 +9,12 @@ proc noTypeSpecifiers*(s: string ) =
     raise newException(NoroTypeError, "no type specifiers: ")
 
 
+proc forbidden*(s: string ) =
+    raise newException(NoroTypeError, "use of forbidden: " & s)
+
+
+
+
 proc undeclared*(s: string) =
     echo "undeclared: " & s
     quit QuitFailure

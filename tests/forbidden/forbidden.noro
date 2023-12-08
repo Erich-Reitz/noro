@@ -1,0 +1,11 @@
+pure function discountedPrice(int originalPrice, int discountRate, bool special) -> int {
+    int discounted_price = originalPrice * discountRate; 
+    forbid originalPrice; 
+
+    if (special) {
+        return originalPrice - 5; 
+    } 
+    
+    return discounted_price; 
+    
+}

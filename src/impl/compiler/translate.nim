@@ -243,6 +243,8 @@ proc translate(tb: Tabl, bi: BlockItem): AstNode =
 
 proc translate(tb: Tabl, stm: Stmt): AstNode =
     case stm.kind:
+                # just a quick way
+    of skForbid: return AstNode(kind: akNop)
     of skReturn:
         return translate(tb, stm.returnStmt)
     of skExpr:

@@ -23,7 +23,7 @@ type
         # Keywords.
         tkAnd, tkElse, tkFalse, tkFun, tkFor, tkIf, tkIntDecl, tkStringDecl,
             tkOr,
-        tkReturn, tkTrue, tkWhile, tkConst, tkPure, tkBoolDecl, tkArrow
+        tkReturn, tkTrue, tkWhile, tkConst, tkPure, tkBoolDecl, tkArrow, tkForbid
 
         tkEOF
 
@@ -56,7 +56,7 @@ type
         fsKindNone, fsKindPure
 
     TypeQualifier* = enum
-        tqNone, tqConst
+        tqNone, tqConst, tqForbid
 
     BuiltinType* = enum
         binTypeUnset, binTypeInt, binTypeString, binTypeBool
@@ -119,6 +119,7 @@ type
 
     VariableDeclSpecifierKind* = enum
         vdsKindTypeSpecifer, vdsKindTypeQualifier
+
     VariableDeclSpecifier* = object
         case kind*: VariableDeclSpecifierKind
         of vdsKindTypeSpecifer:
@@ -147,6 +148,9 @@ type
     ExprStmt* = object
         ex*: Expr
 
+    ForbidStmt* = object
+        iden*: string
+
     IfStmt* = object
         cond*: Expr
         thenStmt*: Stmt
@@ -166,7 +170,7 @@ type
 
 
     StmtKind* = enum
-        skReturn, skExpr, skIf, skCompound
+        skReturn, skExpr, skIf, skCompound, skForbid
 
     Stmt* = ref object
         case kind*: StmtKind
@@ -178,6 +182,8 @@ type
             ifStmt*: IfStmt
         of skCompound:
             compoundStmt*: CompoundStmt
+        of skForbid:
+            forbidStmt*: ForbidStmt
 
 
     CompoundStmt* = object

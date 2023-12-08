@@ -57,6 +57,7 @@ method typecheckExpr(tb: SymbolTable, exp: Expr,
 
 method typecheckExpr(tb: SymbolTable, exp: PrimaryExpr,
         expectedType: TypeSpecifer) =
+
     case exp.kind:
     of pkIden:
         let name = exp.strValue
@@ -64,9 +65,13 @@ method typecheckExpr(tb: SymbolTable, exp: PrimaryExpr,
             let sym = lookup(tb, name).get
             case sym.kind
             of skVar:
-                let definedType = singleTypeSpecifier(name, sym.skVar)
-                if definedType != expectedType:
-                    typeMismatch(expectedType, definedType)
+                if isMarkedForbidden(sym.skVar):
+                    echo "cannot use forbidden variable <", name, ">"
+                    forbidden(name)
+                else:
+                    let definedType = singleTypeSpecifier(name, sym.skVar)
+                    if definedType != expectedType:
+                        typeMismatch(expectedType, definedType)
 
             of skFunc:
                 functionAsValue()
@@ -294,6 +299,21 @@ proc typecheckCompoundStmt(tb: SymbolTable, cStmt: CompoundStmt,
             typecheckDeclaration(tb, bi.declaration)
         of blkStatement:
             typecheckStatement(tb, bi.statement, expectedType)
+    
+
+
+proc typecheckForbidStmt(tb: SymbolTable, fStmt: ForbidStmt,
+        expectedType: TypeSpecifer) =
+    let iden = fStmt.iden
+    if ctxDefined(tb, iden):
+        let sym = lookup(tb, iden).get
+        case sym.kind
+        of skVar:
+            markForbidden(tb, iden)
+        of skFunc:
+            functionAsValue()
+    else:
+        undeclared(iden)
 
 
 proc typecheckStatement(tb: SymbolTable, stm: Stmt,
@@ -307,7 +327,8 @@ proc typecheckStatement(tb: SymbolTable, stm: Stmt,
         typecheckIfStmt(tb, stm.ifStmt, expectedType)
     of skCompound:
         typecheckCompoundStmt(tb, stm.compoundStmt, expectedType)
-
+    of skForbid:
+        typecheckForbidStmt(tb, stm.forbidStmt, expectedType)
 
 
 

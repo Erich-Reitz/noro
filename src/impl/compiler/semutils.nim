@@ -13,6 +13,16 @@ proc isMarkedConst*(vds: seq[VariableDeclSpecifier]): bool =
             discard
     return false
 
+proc isMarkedForbidden*(vds: seq[VariableDeclSpecifier]): bool =
+    for vs in vds:
+        case vs.kind
+        of vdsKindTypeQualifier:
+            if vs.typeQualifier == tqForbid:
+                return true
+        else:
+            discard
+    return false
+
 proc singleTypeSpecifier*(varname: string, vds: seq[VariableDeclSpecifier]): TypeSpecifer =
     var ts: Option[TypeSpecifer] = none(TypeSpecifer)
 

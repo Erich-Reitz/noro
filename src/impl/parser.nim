@@ -367,12 +367,17 @@ proc parse_stmt(p: var Parser): Stmt =
             return Stmt(kind: skExpr, exprStmt: parse_expression_stmt(p))
         of tkIf:
             return Stmt(kind: skIf, ifStmt: parse_if_stmt(p))
+        of tkForbid:
+            discard advance(p)
+            let iden = parse_identifier(p)
+            discard consume(p, tkSemicolon, "Expected ';' after forbid statement")
+            return Stmt(kind: skForbid, forbidStmt: ForbidStmt(iden: iden))
         else:
             return Stmt(kind: skCompound, compoundStmt: parse_compound_stmt(p))
 
 
 proc is_stmt_begin(t: Token): bool =
-    t.typ == tkIf or t.typ == tkReturn or t.typ == tkIdentifier
+    t.typ == tkIf or t.typ == tkReturn or t.typ == tkIdentifier or t.typ == tkForbid
 
 proc parse_block_item(p: var Parser): BlockItem =
     if is_stmt_begin(peek(p)):

@@ -26,7 +26,10 @@ method inferType*(tb: SymbolTable, exp: PrimaryExpr): TypeSpecifer =
             let sym = lookup(tb, name).get
             case sym.kind
             of skVar:
-                return singleTypeSpecifier(name, sym.skVar)
+                if isMarkedForbidden(sym.skVar):
+                    forbidden(name)
+                else:
+                    return singleTypeSpecifier(name, sym.skVar)
             of skFunc:
                 functionAsValue()
         else:

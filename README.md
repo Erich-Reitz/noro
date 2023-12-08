@@ -20,6 +20,26 @@ I wrote a compiler for a very small language. It supports
 
 ## Rest
 
+### Language Features
+
+- `Forbid` construct: forbids a variable from being used after statement
+
+    ```
+    pure function discountedPrice(int originalPrice, int discountRate, bool special) -> int {
+        int discounted_price = originalPrice * discountRate; 
+        forbid originalPrice; 
+
+        if (special) {
+            // error duing return statement of <discountedPrice>: use of forbidden: originalPrice
+            return originalPrice - 5;
+
+        } 
+        
+        return discounted_price; 
+        
+    }
+    ```
+
 #### Implemented
 The semantic analysis phase includes
 - Typechecking over builtin types and their operations (+, -, logical and/or, less than, assignment, etc.)
