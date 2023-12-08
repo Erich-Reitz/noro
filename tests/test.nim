@@ -112,3 +112,6 @@ suite "integration tests":
 
   test "forbidden":
     check runTestOfCompilerErrorChecking("forbidden")
+
+  test "str_assignment":
+    check runTestOfGeneratedExecutable("str_assignment")

@@ -1,0 +1,27 @@
+// standard library function
+function writestrnewline(string any) -> int {}
+
+function main() -> int {
+    string  oneString = "one"; 
+    string  twoTwoString = "two";
+    string result = "result";
+
+    // just a char *
+    string resultCopy = result;
+    int oneInt = 1;
+    int twoInt = 2;
+    int threeInt = 3;
+
+    if (oneInt == 1) {
+        result = oneString; 
+    }
+    
+    writestrnewline(result); // "one"
+    if (twoInt == 2) {
+        result = twoTwoString;
+    }
+
+    writestrnewline(result); // "two"
+    writestrnewline(resultCopy); // "result"
+    return 0;
+}
