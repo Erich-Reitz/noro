@@ -1,6 +1,7 @@
 import std/strutils
 import std/tables
 
+import asmgen
 import instructutils
 import instruction
 
@@ -22,6 +23,14 @@ proc `[]`(t: GenTable, s: string): string =
 
     echo "codegen: ", s, " not found in table"
     quit QuitFailure
+
+
+
+proc generateTableIdx(t: GenTable, label: string): string =
+    if t.table.contains(label) == false:
+        t.table[label] = t.counter
+        t.counter += 1
+    return $t[label]
 
 
 proc `+=`(c: Ctx, s: string) =
@@ -84,17 +93,10 @@ proc codeGenMoveInstruction(t: GenTable,
             quit QuitFailure
     else:
         if i.src.kind == vkTemp and i.src.label.isRegister:
-            if t.table.contains(dest.label) == false:
-                t.table[dest.label] = t.counter
-
-                t.counter += 1
-
+            discard generateTableIdx(t, dest.label)
             return "    mov qword [rbp - " & $t[dest.label] & "], " & i.src.label
         else:
-            if t.table.contains(dest.label) == false:
-                t.table[dest.label] = t.counter
-
-                t.counter += 1
+            discard generateTableIdx(t, dest.label)
             let src = i.src
             case dest.kind
             of vkTemp:
@@ -195,10 +197,7 @@ proc codegenConditionalJump(t: GenTable,
 
     assert dest.kind == vkTemp
     let destName = dest.label
-    if t.table.contains(destName) == false:
-        t.table[destName] = t.counter
-        t.counter += 1
-    let destIndex = t[destName]
+    let destIndex = generateTableIdx(t, destName)
 
     # src1 is a temp. label
     assert src.kind == vkTemp
@@ -207,37 +206,29 @@ proc codegenConditionalJump(t: GenTable,
     if src2 != nil:
         assert src2.kind == vkTemp
         let src2Name = src2.label
-        return "    cmp byte [rbp - " & destIndex & "], 0\n" &
-               "    je ." & src2Name & "\n" &
-               "    jmp ." & src1Name
+
+        return asmCmpOffset(destIndex = destIndex, jumpEqualToZero = src2Name,
+                elseJumpLabel = src1Name)
     else:
-        return "    cmp byte [rbp - " & destIndex & "], 0\n" &
-               "    je ." & src1Name
+        return asmCmpOffset(destIndex = destIndex, jumpEqualToZero = src1Name)
 
 proc codegenLabelCreate(t: GenTable, i: Instruction): string =
     assert i.kind == ikLabelCreate
-
     let dest = i.dst
     assert dest.kind == vkTemp
     let destName = dest.label
-
     return "." & destName & ":\n"
 
 
-proc codegenAdd(t: GenTable, i: Instruction): string =
-    assert i.kind == ikAdd
-
+proc codegenArthmeticBinaryOperation(t: GenTable, i: Instruction,
+        op: string): string =
     let dest = i.dst
     assert dest.kind == vkTemp
 
 
     let destName = dest.label
 
-    if t.table.contains(destName) == false:
-        t.table[destName] = t.counter
-        t.counter += 1
-
-    let destIndex = t[destName]
+    let destIndex = generateTableIdx(t, destName)
 
     let lhs = i.src
     let rhs = i.src2
@@ -251,13 +242,13 @@ proc codegenAdd(t: GenTable, i: Instruction): string =
             let lhsIndex = t[lhsName]
             let rhsIndex = t[rhsName]
             return "    mov rax, [rbp - " & lhsIndex & "]\n" &
-                   "    add rax, [rbp - " & rhsIndex & "]\n" &
+                   "    " & op & " rax, [rbp - " & rhsIndex & "]\n" &
                    "    mov [rbp - " & destIndex & "], rax"
         of vkConst:
             let lhsName = lhs.label
             let lhsIndex = t[lhsName]
             return "    mov rax, [rbp - " & lhsIndex & "]\n" &
-                   "    add rax, " & $(rhs.val) & "\n" &
+                    "    " & op & " rax, " & $(rhs.val) & "\n" &
                    "    mov [rbp - " & destIndex & "], rax"
         of vkStringLit:
             echo "codegen: string literals not supported yet"
@@ -271,133 +262,15 @@ proc codegenAdd(t: GenTable, i: Instruction): string =
             let rhsName = rhs.label
             let rhsIndex = t[rhsName]
             return "    mov rax, " & $(lhs.val) & "\n" &
-                   "    add rax, [rbp - " & rhsIndex & "]\n" &
+                   "    " & op & " rax, [rbp - " & rhsIndex & "]\n" &
                    "    mov [rbp - " & destIndex & "], rax"
         of vkConst:
             return "    mov rax, " & $(lhs.val) & "\n" &
-                   "    add rax, " & $(rhs.val) & "\n" &
+                   "    " & op & " rax, " & $(rhs.val) & "\n" &
                    "    mov [rbp - " & destIndex & "], rax"
         of vkStringLit:
             echo "codegen: string literals not supported yet"
             quit QuitFailure
-
-proc codegenMinus(t: GenTable, i: Instruction): string =
-    assert i.kind == ikMinus
-
-    let dest = i.dst
-    assert dest.kind == vkTemp
-
-
-    let destName = dest.label
-
-    if t.table.contains(destName) == false:
-        t.table[destName] = t.counter
-        t.counter += 1
-
-    let destIndex = t[destName]
-
-    let lhs = i.src
-    let rhs = i.src2
-
-    case lhs.kind
-    of vkTemp:
-        case rhs.kind
-        of vkTemp:
-            let lhsName = lhs.label
-            let rhsName = rhs.label
-            let lhsIndex = t[lhsName]
-            let rhsIndex = t[rhsName]
-            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
-                   "    sub rax, [rbp - " & rhsIndex & "]\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkConst:
-            let lhsName = lhs.label
-            let lhsIndex = t[lhsName]
-            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
-                   "    sub rax, " & $(rhs.val) & "\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkStringLit:
-            echo "codegen: string literals not supported yet"
-            quit QuitFailure
-    of vkStringLit:
-        echo "codegen: string literals not supported yet"
-        quit QuitFailure
-    of vkConst:
-        case rhs.kind
-        of vkTemp:
-            let rhsName = rhs.label
-            let rhsIndex = t[rhsName]
-            return "    mov rax, " & $(lhs.val) & "\n" &
-                   "    sub rax, [rbp - " & rhsIndex & "]\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkConst:
-            return "    mov rax, " & $(lhs.val) & "\n" &
-                   "    sub rax, " & $(rhs.val) & "\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkStringLit:
-            echo "codegen: string literals not supported yet"
-            quit QuitFailure
-
-
-
-
-proc codegenMult(t: GenTable, i: Instruction): string =
-    assert i.kind == ikMult
-
-    let dest = i.dst
-    assert dest.kind == vkTemp
-
-
-    let destName = dest.label
-
-    if t.table.contains(destName) == false:
-        t.table[destName] = t.counter
-        t.counter += 1
-
-    let destIndex = t[destName]
-
-    let lhs = i.src
-    let rhs = i.src2
-
-    case lhs.kind
-    of vkTemp:
-        case rhs.kind
-        of vkTemp:
-            let lhsName = lhs.label
-            let rhsName = rhs.label
-            let lhsIndex = t[lhsName]
-            let rhsIndex = t[rhsName]
-            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
-                   "    imul rax, [rbp - " & rhsIndex & "]\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkConst:
-            let lhsName = lhs.label
-            let lhsIndex = t[lhsName]
-            return "    mov rax, [rbp - " & lhsIndex & "]\n" &
-                   "    imul rax, " & $(rhs.val) & "\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkStringLit:
-            echo "codegen: string literals not supported yet"
-            quit QuitFailure
-    of vkStringLit:
-        echo "codegen: string literals not supported yet"
-        quit QuitFailure
-    of vkConst:
-        case rhs.kind
-        of vkTemp:
-            let rhsName = rhs.label
-            let rhsIndex = t[rhsName]
-            return "    mov rax, " & $(lhs.val) & "\n" &
-                   "    imul rax, [rbp - " & rhsIndex & "]\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkConst:
-            return "    mov rax, " & $(lhs.val) & "\n" &
-                   "    imul rax, " & $(rhs.val) & "\n" &
-                   "    mov [rbp - " & destIndex & "], rax"
-        of vkStringLit:
-            echo "codegen: string literals not supported yet"
-            quit QuitFailure
-
 
 
 proc codegen(t: GenTable, i: Instruction): string =
@@ -413,20 +286,16 @@ proc codegen(t: GenTable, i: Instruction): string =
     of ikLabelJumpTo:
         return "    jmp ." & i.dst.label
     of ikAdd:
-        return codegenAdd(t, i)
+        return codegenArthmeticBinaryOperation(t, i, "add")
     of ikMinus:
-        return codegenMinus(t, i)
+        return codegenArthmeticBinaryOperation(t, i, "sub")
     of ikMult:
-        return codegenMult(t, i)
+        return codegenArthmeticBinaryOperation(t, i, "imul")
     of ikCall:
         let dest = i.dst
         assert dest.kind == vkTemp
         let destName = dest.label
-        if t.table.contains(destName) == false:
-            t.table[destName] = t.counter
-            t.counter += 1
-
-        let destIndex = t[destName]
+        let destIndex = generateTableIdx(t, destName)
         return "    call " & i.src.label & "\n" &
                "    mov [rbp - " & destIndex & "], rax"
     of ikStringLabelCreate:
