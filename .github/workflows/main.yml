@@ -16,5 +16,5 @@ jobs:
       - name: Install NASM
         run: sudo apt-get update && sudo apt-get install -y nasm
       - run: mkdir asm
-      - run: nimble build -Y
+      - run: nimble build --multimethods:on -Y
       - run: nimble test -Y
