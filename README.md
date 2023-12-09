@@ -251,7 +251,7 @@ max2:
 This project is written in the [Nim](https://nim-lang.org/) programming language and requires version 
 2.0.0 or greater. To install Nim, visit: [Install Nim](https://nim-lang.org/install.html). Building the 
 project requires `Nimble` which is bundled with Nim installation. To the build the binary, execute 
-`nimble build` in the project directory.
+`nimble build --multimethods:on` in the project directory.
 
 ### Commands
 - format: `find src/ -name "*.nim" -exec nimpretty {} \;`
