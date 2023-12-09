@@ -22,7 +22,7 @@ I wrote a compiler for a very small language. It supports
 
 ### Language Features
 
-- `Forbid` construct: forbids a variable from being used after statement
+- `Forbid` keyword: forbids a variable from being used after statement
 
     ```
     pure function discountedPrice(int originalPrice, int discountRate, bool special) -> int {
